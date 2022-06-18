@@ -7,30 +7,49 @@
 # --------------------------------------------------------
 
 import os
-import torch
+import sys
+
 import numpy as np
-from PIL import ImageFilter, ImageOps
-import torch.utils.data
+import torch
 import torch.distributed as dist
+import torch.utils.data
+from PIL import Image, ImageFilter, ImageOps
+from timm.data import Mixup, create_transform
+from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from torchvision import transforms
 from torchvision.transforms import functional as F
-from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
-from timm.data import Mixup
-from timm.data import create_transform
-#from timm.data.transforms import _str_to_pil_interpolation 
-from timm.data.transforms import _pil_interp
-from PIL import Image
-
-from .cached_image_folder import CachedImageFolder
-from .custom_image_folder import CustomImageFolder
-from .tartanair_video import TartanAirVideoDataset
-from .samplers import SubsetRandomSampler, SubsetSampler
-#from utils.utils import ResizeFlowNP
-
-import sys
 #sys.path.append('../')
 from utils.utils import ResizeFlowNP
 
+from .cached_image_folder import CachedImageFolder
+from .custom_image_folder import CustomImageFolder
+from .samplers import SubsetRandomSampler, SubsetSampler
+from .tartanair_video import TartanAirVideoDataset
+
+#from utils.utils import ResizeFlowNP
+
+
+try:
+    from torchvision.transforms import InterpolationMode
+
+
+    def _pil_interp(method):
+        if method == 'bicubic':
+            return InterpolationMode.BICUBIC
+        elif method == 'lanczos':
+            return InterpolationMode.LANCZOS
+        elif method == 'hamming':
+            return InterpolationMode.HAMMING
+        else:
+            # default bilinear, do we want to allow nearest?
+            return InterpolationMode.BILINEAR
+
+
+    import timm.data.transforms as timm_transforms
+
+    timm_transforms._pil_interp = _pil_interp
+except:
+    from timm.data.transforms import _pil_interp
 
 
 def build_loader(args, data_type):

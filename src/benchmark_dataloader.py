@@ -66,10 +66,5 @@ if args.flow:
 print('--used modalities are:', data_type)
 
 
-if args.use_val:
-    train_dataset, eval_dataset, train_loader, data_loader_val, _ = build_loader(args, data_type)
-    train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
-    eval_sampler = torch.utils.data.distributed.DistributedSampler(eval_dataset)
-else:
-    train_dataset, _, train_loader, _, _ = build_loader(args, data_type)
-    train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
+train_dataset, _, train_loader, _, _ = build_loader(args, data_type)
+# train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
