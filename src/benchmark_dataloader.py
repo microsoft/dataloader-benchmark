@@ -68,3 +68,5 @@ print('--used modalities are:', data_type)
 
 train_dataset, _, train_loader, _, _ = build_loader(args, data_type)
 # train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
+sample = train_dataset[0]
+bla = 1

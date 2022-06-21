@@ -1,14 +1,15 @@
 import io
-import os
 import json
-import numpy as np
-from PIL import Image
+import os
 from collections import defaultdict
 
+import numpy as np
 import torch
 import torch.utils.data as data
+from PIL import Image
 
-from .zipreader import is_zip_path, ZipReader
+from .zipreader import ZipReader, is_zip_path
+
 
 class TubeMaskingGenerator:
     def __init__(self, input_size, mask_ratio):
@@ -93,8 +94,8 @@ class TartanAirVideoDataset(data.Dataset):
 
     def __init__(self, ann_file='', clip_len=8, seq_len=3, data_types=['image_left', 'flow_flow'], transform=None, video_name_keyword=None):
         # Load annotation file.
-        root = "%s/../../Data/tartanair-release1" % os.path.dirname(os.path.abspath(__file__))
-        ann_path = os.path.join(root, ann_file)
+        root = os.path.dirname(os.path.abspath(ann_file))
+        ann_path = os.path.join(ann_file)
         with open(ann_path, 'r') as f:
             self.ann = json.load(f)
         assert self.ann['type'] == 'video_pretrain'
