@@ -8,7 +8,6 @@ def get_tartan_dataset_and_loader(args):
     data_type = ["image_left"]
     if args.flow:
         data_type.append("flow_flow")
-    print("--used modalities are:", data_type)
     train_dataset, _, train_loader, _, _ = build_loader(args, data_type)
     # train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
     return train_dataset, train_loader
@@ -19,7 +18,10 @@ def benchmark(args):
     tic = time.time()
     for batch_idx, _ in enumerate(train_dataloader):
         print("batch_idx {batch_idx}")
-    print(f"time taken for {len(train_dataloader)} batches: {time.time()-tic} seconds")
+    result = time.time() - tic
+    print(f"time taken for {len(train_dataloader)} batches: {result} seconds")
+    with open("benchmark_results.csv", "a") as f:
+        f.write(f"{len(train_dataloader)}, {args.batch_size}, {args.workers}, {result}")
 
 
 def trace_handler(p):
@@ -32,6 +34,7 @@ def pytorch_profiler_schedule(args):
     from torch.profiler import ProfilerActivity, profile, schedule
 
     train_dataset, train_dataloader = get_tartan_dataset_and_loader(args)
+    print(len(train_dataloader))
     with profile(
         activities=[ProfilerActivity.CPU],
         profile_memory=True,
