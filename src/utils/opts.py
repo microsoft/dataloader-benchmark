@@ -9,7 +9,7 @@ def parse_args():
     parser.add_argument("--save_freq", type=int, default=100)
     parser.add_argument("--work_dir", type=str, default="work_dirs/pretrain/rgb2rgb")
     parser.add_argument("--resume", type=str, default="")
-    parser.add_argument("--epochs", type=int, default=800)
+    parser.add_argument("--epochs", type=int, default=1)
     parser.add_argument("--warmup_ratio", type=float, default=0.05)
     parser.add_argument("--backbone", type=str, default="vit")
     parser.add_argument("--local_rank", type=int, default=0)
@@ -58,6 +58,9 @@ def parse_args():
         type=str,
     )
     parser.add_argument("--val_ann_file", default=" ", type=str)
+    parser.add_argument(
+        "--benchmark_results_file", default="benchmark_results.csv", type=str
+    )
     parser.add_argument("--train_transform", default="", type=str)
     parser.add_argument(
         "--train_transform_aug",

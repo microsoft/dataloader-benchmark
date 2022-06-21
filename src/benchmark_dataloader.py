@@ -1,4 +1,4 @@
-import time
+from timeit import default_timer as timer
 
 from data import build_loader
 from utils.opts import parse_args
@@ -15,13 +15,23 @@ def get_tartan_dataset_and_loader(args):
 
 def benchmark(args):
     train_dataset, train_dataloader = get_tartan_dataset_and_loader(args)
-    tic = time.time()
+    start = timer()
+    last = start
+
+    print(f"train_dataloader length {len(train_dataloader)}")
+
     for batch_idx, _ in enumerate(train_dataloader):
-        print("batch_idx {batch_idx}")
-    result = time.time() - tic
-    print(f"time taken for {len(train_dataloader)} batches: {result} seconds")
-    with open("benchmark_results.csv", "a") as f:
-        f.write(f"{len(train_dataloader)}, {args.batch_size}, {args.workers}, {result}")
+        print(f"batch_idx {batch_idx} took {(timer() - last):.3f} seconds")
+        last = timer()
+
+    result = timer() - start
+
+    print(f"{len(train_dataloader)} batches took {result:.3f} seconds")
+
+    with open(args.benchmark_results_file, "a") as f:
+        f.write(
+            f"{len(train_dataloader)}, {args.batch_size}, {args.workers}, {args.num_seq}, {args.seq_len}, {result:.3f}"
+        )
 
 
 def trace_handler(p):
@@ -47,10 +57,22 @@ def pytorch_profiler_schedule(args):
 
 
 def main(args):
-    # benchmark(args)
-    pytorch_profiler_schedule(args)
+    print("start")
+    benchmark(args)
+    # pytorch_profiler_schedule(args)
+
+
+def cprofile(args):
+    import cProfile
+    import pstats
+
+    cProfile.run("main(args)", f"{__file__}.profile")
+    s = pstats.Stats(f"{__file__}.profile")
+    s.strip_dirs()
+    s.sort_stats("time").print_stats(10)
 
 
 if __name__ == "__main__":
     args = parse_args()
     main(args)
+    # cprofile(args)

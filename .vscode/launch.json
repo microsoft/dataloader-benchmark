@@ -1,0 +1,38 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Python: benchmark_debug_1",
+            "type": "python",
+            "request": "launch",
+            "program": "src/benchmark_dataloader.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--train_ann_file",
+                "/datadrive/commondatasets/tartanair-release1/train_ann_debug_ratnesh.json",
+                "--benchmark_results_file",
+                "benchmark_results.csv",
+                "--batch_size",
+                "32",
+                "--workers",
+                "1",
+                "--num_seq",
+                "16",
+                "--seq_len",
+                "1"
+            ]
+        }
+    ]
+}

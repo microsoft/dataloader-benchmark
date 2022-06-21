@@ -1,5 +1,5 @@
-benchmark_results.csv
-
+*.csv
+*.py.profile
 # amulet
 .amltconfig
 amlt/
