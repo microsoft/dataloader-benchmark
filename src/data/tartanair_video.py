@@ -14,8 +14,8 @@ from .zipreader import ZipReader, is_zip_path
 class TubeMaskingGenerator:
     def __init__(self, input_size, mask_ratio):
         self.frames, self.height, self.width = input_size
-        self.num_patches_per_frame =  self.height * self.width
-        self.total_patches = self.frames * self.num_patches_per_frame 
+        self.num_patches_per_frame = self.height * self.width
+        self.total_patches = self.frames * self.num_patches_per_frame
         self.num_masks_per_frame = int(mask_ratio * self.num_patches_per_frame)
         self.total_masks = self.frames * self.num_masks_per_frame
 
@@ -26,18 +26,21 @@ class TubeMaskingGenerator:
         return repr_str
 
     def __call__(self):
-        mask_per_frame = np.hstack([
-            np.zeros(self.num_patches_per_frame - self.num_masks_per_frame),
-            np.ones(self.num_masks_per_frame),
-        ])
+        mask_per_frame = np.hstack(
+            [
+                np.zeros(self.num_patches_per_frame - self.num_masks_per_frame),
+                np.ones(self.num_masks_per_frame),
+            ]
+        )
         np.random.shuffle(mask_per_frame)
-        mask = np.tile(mask_per_frame, (self.frames,1)).flatten()
-        return mask 
+        mask = np.tile(mask_per_frame, (self.frames, 1)).flatten()
+        return mask
 
 
 def zipped_pil_loader(path):
-    """ PIL image loader that supports zipped images.
-        Ref: https://github.com/SwinTransformer/Transformer-SSL/blob/main/data/cached_image_folder.py#L179
+    """PIL image loader that supports zipped images.
+
+    Ref: https://github.com/SwinTransformer/Transformer-SSL/blob/main/data/cached_image_folder.py#L179
     """
     # open path as file to avoid ResourceWarning (https://github.com/python-pillow/Pillow/issues/835)
     if isinstance(path, bytes):
@@ -46,32 +49,32 @@ def zipped_pil_loader(path):
         data = ZipReader.read(path)
         img = Image.open(io.BytesIO(data))
     else:
-        with open(path, 'rb') as f:
+        with open(path, "rb") as f:
             img = Image.open(f)
-    return img.convert('RGB')
+    return img.convert("RGB")
 
 
 def zipped_numpy_loader(path):
-    """ NumPy loader that supports zipped files. """
+    """NumPy loader that supports zipped files."""
     if isinstance(path, bytes):
         x = np.load(io.BytesIO(path))
     elif is_zip_path(path):
         data = ZipReader.read(path)
         x = np.load(io.BytesIO(data))
     else:
-        with open(path, 'rb') as f:
+        with open(path, "rb") as f:
             x = np.load(f)
     return x
 
 
 class TartanAirVideoDataset(data.Dataset):
     """A TartanAir video dataset where the annotations are arranged in this way: ::
-        Format: 
+        Format:
         {
-            'type': 'video', 
+            'type': 'video',
             'ann': {
                 'video name 1': [
-                    {'image_left_rel_path': image_left_rel_path, 
+                    {'image_left_rel_path': image_left_rel_path,
                      'depth_left_rel_path': depth_left_rel_path,
                      'seg_left_rel_path': seg_left_rel_path,
                      'flow_flow_rel_path': flow_flow_rel_path,
@@ -92,26 +95,38 @@ class TartanAirVideoDataset(data.Dataset):
         clip_indices (list): List of (video_name, start_frame_index) tuples
     """
 
-    def __init__(self, ann_file='', clip_len=8, seq_len=3, data_types=['image_left', 'flow_flow'], transform=None, video_name_keyword=None):
+    def __init__(
+        self,
+        ann_file="",
+        clip_len=8,
+        seq_len=3,
+        data_types=["image_left", "flow_flow"],
+        transform=None,
+        video_name_keyword=None,
+    ):
         # Load annotation file.
         root = os.path.dirname(os.path.abspath(ann_file))
         ann_path = os.path.join(ann_file)
-        with open(ann_path, 'r') as f:
+        with open(ann_path) as f:
             self.ann = json.load(f)
-        assert self.ann['type'] == 'video_pretrain'
+        assert self.ann["type"] == "video_pretrain"
 
         # Generate clip indices. Format: (video name, start frame index).
         self.clip_indices = []
-        for video_name in self.ann['ann']:
+        for video_name in self.ann["ann"]:
             if video_name_keyword:
                 if video_name_keyword not in video_name:
                     continue
-            video = self.ann['ann'][video_name]
+            video = self.ann["ann"][video_name]
             if len(video) >= clip_len * seq_len:
                 for start_frame_index in range(len(video) - clip_len * seq_len + 1):
                     # Only use the clips that all used data types are available in each frame.
                     end_frame_index = start_frame_index + clip_len * seq_len - 1
-                    if all(f'{data_type}_rel_path' in video[i] for data_type in data_types for i in range(start_frame_index, end_frame_index + 1)):
+                    if all(
+                        f"{data_type}_rel_path" in video[i]
+                        for data_type in data_types
+                        for i in range(start_frame_index, end_frame_index + 1)
+                    ):
                         self.clip_indices.append((video_name, start_frame_index))
 
         # Other settings.
@@ -119,12 +134,12 @@ class TartanAirVideoDataset(data.Dataset):
         self.seq_len = seq_len
         self.data_types = data_types
         self.transform = transform
-        self.num_seq = clip_len 
+        self.num_seq = clip_len
 
-        
         # added for mae pretrain
-        self.masked_position_generator = TubeMaskingGenerator((16//2, 224//16, 224//16), 0.9)
-        
+        self.masked_position_generator = TubeMaskingGenerator(
+            (16 // 2, 224 // 16, 224 // 16), 0.9
+        )
 
     def __getitem__(self, index):
         """
@@ -137,20 +152,21 @@ class TartanAirVideoDataset(data.Dataset):
         # Get annotation.
         video_name, start_frame_index = self.clip_indices[index]
 
-        
         item = defaultdict(list)
-        for frame_index in range(start_frame_index, start_frame_index + self.num_seq * self.seq_len):
-            frame_ann = self.ann['ann'][video_name][frame_index]
+        for frame_index in range(
+            start_frame_index, start_frame_index + self.num_seq * self.seq_len
+        ):
+            frame_ann = self.ann["ann"][video_name][frame_index]
 
             # Load data.
             for data_type in self.data_types:
-                rel_path = frame_ann[f'{data_type}_rel_path'].strip()
+                rel_path = frame_ann[f"{data_type}_rel_path"].strip()
                 path = os.path.join(self.root, rel_path)
-                #print('root, rel_path', self.root, rel_path)
+                # print('root, rel_path', self.root, rel_path)
                 ext = os.path.splitext(os.path.basename(path))[1].lower()
-                if ext in ['.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm', '.tif']:
+                if ext in [".jpg", ".jpeg", ".png", ".ppm", ".bmp", ".pgm", ".tif"]:
                     data = zipped_pil_loader(path)
-                elif ext in ['.npy']:
+                elif ext in [".npy"]:
                     data = zipped_numpy_loader(path)
                 else:
                     raise ValueError()
@@ -158,18 +174,20 @@ class TartanAirVideoDataset(data.Dataset):
                 item[data_type].append(data)
 
         assert self.transform is not None
-        item = self.transform(item)  # Note: The transform function should transform data and stack them properly for each data type.
+        item = self.transform(
+            item
+        )  # Note: The transform function should transform data and stack them properly for each data type.
 
         #### added for COMPASS as  N, C, SL, H, W ########
         for modality, _ in item.items():
             seq = item[modality]
             _, C, H, W = seq.permute(1, 0, 2, 3).shape
-            #(C, H, W) = seq[0].size()
-            #seq = torch.stack(seq, 0)
+            # (C, H, W) = seq[0].size()
+            # seq = torch.stack(seq, 0)
             seq = seq.view(self.num_seq, self.seq_len, C, H, W).transpose(1, 2)
-            item[modality] = seq # N, C, SL, H,  W
+            item[modality] = seq  # N, C, SL, H,  W
 
-        mask = self.masked_position_generator() 
+        mask = self.masked_position_generator()
 
         return item, mask
 
@@ -177,7 +195,7 @@ class TartanAirVideoDataset(data.Dataset):
         return len(self.clip_indices)
 
     def __repr__(self):
-        fmt_str = 'Dataset ' + self.__class__.__name__ + '\n'
-        fmt_str += '    Number of datapoints: {}\n'.format(self.__len__())
-        fmt_str += '    Root Location: {}\n'.format(self.root)
+        fmt_str = "Dataset " + self.__class__.__name__ + "\n"
+        fmt_str += f"    Number of datapoints: {self.__len__()}\n"
+        fmt_str += f"    Root Location: {self.root}\n"
         return fmt_str

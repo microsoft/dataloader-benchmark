@@ -18,7 +18,7 @@ class CustomImageFolder(datasets.ImageFolder):
         """
         path, target = self.samples[index]
         image = self.loader(path)
-        
+
         ret = []
         if self.transform is not None:
             for t in self.transform:
