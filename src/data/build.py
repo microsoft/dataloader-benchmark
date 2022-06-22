@@ -18,7 +18,6 @@ from timm.data import Mixup, create_transform
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from torchvision import transforms
 from torchvision.transforms import functional as F
-
 from utils.utils import ResizeFlowNP
 
 from .tartanair_video import TartanAirVideoDataset
@@ -405,6 +404,7 @@ class TartanAirVideoTransformWithAugmentation:
             center_crop_size=center_crop_size, resize_size=resize_size
         )
 
+    # @profile
     def __call__(self, item):
         # TODO: Need a better visualization of these augmentations.
         # 1. Color jittering

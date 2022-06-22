@@ -95,6 +95,7 @@ class TartanAirVideoDataset(data.Dataset):
         clip_indices (list): List of (video_name, start_frame_index) tuples
     """
 
+    # @profile
     def __init__(
         self,
         ann_file="",
@@ -141,6 +142,7 @@ class TartanAirVideoDataset(data.Dataset):
             (16 // 2, 224 // 16, 224 // 16), 0.9
         )
 
+    # @profile
     def __getitem__(self, index):
         """
         Args:

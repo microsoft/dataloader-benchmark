@@ -1,5 +1,9 @@
+# benchmarks and profiling
 *.csv
 *.py.profile
+*lprof
+
+
 # amulet
 .amltconfig
 amlt/
