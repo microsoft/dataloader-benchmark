@@ -1,3 +1,5 @@
+mlruns/
+
 # benchmarks and profiling
 *.csv
 *.py.profile

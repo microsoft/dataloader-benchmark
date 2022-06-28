@@ -23,9 +23,12 @@ def benchmark(args):
 
     for batch_idx, batch in enumerate(train_dataloader):
         start_copy = timer()
-        for sample in batch:
-            for modality in args.modalities:
-                sample[modality].cuda()
+        batch[0]["image_left"].cuda()
+        batch[1].cuda()
+        # for sample in batch:
+        # sample[1].cuda()
+        # for modality in args.modalities:
+        # sample[modality].cuda()
         time_copy = time_copy + (timer() - start_copy)
 
         if batch_idx == 0:
@@ -41,9 +44,9 @@ def benchmark(args):
     time_per_batch = (last - start) / num_batches
     time_per_batch_without_first = (last - first) / (num_batches - 1)
 
+    print(f"{time_first_batch:.3f} secs for the first batch")
     print(f"{time_per_batch:.3f} secs per batch")
     print(f"{time_per_batch_without_first:.3f} secs per batch without counting first batch")
-    print(f"{time_first_batch:.3f} secs for the first batch")
     print(f"{time_copy_per_batch:.3f} secs per batch for copying from cpu to gpu")
 
     mlflow.log_metric(key="num_workers", value=args.workers, step=0)
@@ -57,7 +60,7 @@ def benchmark(args):
 
     with open(args.benchmark_results_file, "a") as f:
         f.write(
-            f"{args.batch_size}, {args.workers}, {args.num_seq}, {args.seq_len}, {time_per_batch_without_first:.3f},  {time_per_batch:.3f}, {time_first_batch:.3f}, {time_copy_per_batch:.3f}\n"
+            f"{args.batch_size}, {args.workers}, {args.num_seq}, {args.seq_len}, {time_first_batch:.3f}, {time_per_batch:.3f}, {time_per_batch_without_first:.3f}, {time_copy_per_batch:.3f}\n"
         )
 
 
