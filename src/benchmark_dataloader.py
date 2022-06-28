@@ -23,7 +23,8 @@ def benchmark(args):
 
     print(f"train_dataloader length {num_batches}")
 
-    for batch_idx, _ in enumerate(train_dataloader):
+    for batch_idx, batch in enumerate(train_dataloader):
+        batch.cuda()
         if batch_idx == 0:
             first = timer()
         # print(f"batch_idx {batch_idx} took {(timer() - last):.3f} seconds")
