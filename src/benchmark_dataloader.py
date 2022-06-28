@@ -17,20 +17,31 @@ def benchmark(args):
     train_dataset, train_dataloader = get_tartan_dataset_and_loader(args)
     start = timer()
     last = start
+    num_batches = len(train_dataloader)
 
-    print(f"train_dataloader length {len(train_dataloader)}")
+    print(f"train_dataloader length {num_batches}")
 
     for batch_idx, _ in enumerate(train_dataloader):
+        if batch_idx == 0:
+            first = timer()
         print(f"batch_idx {batch_idx} took {(timer() - last):.3f} seconds")
         last = timer()
 
-    result = timer() - start
+    last = timer()
 
-    print(f"{len(train_dataloader)} batches took {result:.3f} seconds")
+    time_first_batch = first - start
+    time_per_batch = (last - start) / num_batches
+    time_per_batch_without_first = (last - first) / num_batches
+
+    print(f"{time_per_batch:.3f} secs per batch")
+    print(
+        f"{time_per_batch_without_first:.3f} secs per batch without counting first batch"
+    )
+    print(f"{time_first_batch:.3f} secs for the first batch")
 
     with open(args.benchmark_results_file, "a") as f:
         f.write(
-            f"{len(train_dataloader)}, {args.batch_size}, {args.workers}, {args.num_seq}, {args.seq_len}, {result:.3f}"
+            f"{args.batch_size}, {args.workers}, {args.num_seq}, {args.seq_len}, {time_per_batch_without_first:.3f},  {time_per_batch:.3f}, {time_first_batch:.3f} \n"
         )
 
 
