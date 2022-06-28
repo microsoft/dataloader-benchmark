@@ -110,9 +110,7 @@ class DatasetFolder(data.Dataset):
             samples = make_dataset(root, class_to_idx, extensions)
         # zip mode
         else:
-            samples = make_dataset_with_ann(
-                os.path.join(root, ann_file), os.path.join(root, img_prefix), extensions
-            )
+            samples = make_dataset_with_ann(os.path.join(root, ann_file), os.path.join(root, img_prefix), extensions)
 
         if len(samples) == 0:
             raise (
@@ -151,9 +149,7 @@ class DatasetFolder(data.Dataset):
         for index in range(n_sample):
             if index % (n_sample // 10) == 0:
                 t = time.time() - start_time
-                print(
-                    f"global_rank {dist.get_rank()} cached {index}/{n_sample} takes {t:.2f}s per block"
-                )
+                print(f"global_rank {dist.get_rank()} cached {index}/{n_sample} takes {t:.2f}s per block")
                 start_time = time.time()
             path, target = self.samples[index]
             if self.cache_mode == "full":
@@ -188,13 +184,9 @@ class DatasetFolder(data.Dataset):
         fmt_str += f"    Number of datapoints: {self.__len__()}\n"
         fmt_str += f"    Root Location: {self.root}\n"
         tmp = "    Transforms (if any): "
-        fmt_str += "{}{}\n".format(
-            tmp, self.transform.__repr__().replace("\n", "\n" + " " * len(tmp))
-        )
+        fmt_str += "{}{}\n".format(tmp, self.transform.__repr__().replace("\n", "\n" + " " * len(tmp)))
         tmp = "    Target Transforms (if any): "
-        fmt_str += "{}{}".format(
-            tmp, self.target_transform.__repr__().replace("\n", "\n" + " " * len(tmp))
-        )
+        fmt_str += "{}{}".format(tmp, self.target_transform.__repr__().replace("\n", "\n" + " " * len(tmp)))
         return fmt_str
 
 

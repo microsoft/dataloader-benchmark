@@ -39,9 +39,7 @@ class ZipReader:
     @staticmethod
     def split_zip_style_path(path):
         pos_at = path.index("@")
-        assert pos_at != -1, (
-            "character '@' is not found from the given path '%s'" % path
-        )
+        assert pos_at != -1, "character '@' is not found from the given path '%s'" % path
 
         zip_path = path[0:pos_at]
         folder_path = path[pos_at + 1 :]
@@ -71,9 +69,7 @@ class ZipReader:
     @staticmethod
     def list_files(path, extension=None):
         if extension is None:
-            extension = [
-                ".*"
-            ]  # FIXME: This '.*' extension is not correctly used in the `in extension` code below.
+            extension = [".*"]  # FIXME: This '.*' extension is not correctly used in the `in extension` code below.
         zip_path, folder_path = ZipReader.split_zip_style_path(path)
 
         zfile = ZipReader.get_zipfile(zip_path)

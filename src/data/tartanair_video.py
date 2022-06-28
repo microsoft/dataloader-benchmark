@@ -4,7 +4,6 @@ import os
 from collections import defaultdict
 
 import numpy as np
-import torch
 import torch.utils.data as data
 from PIL import Image
 
@@ -20,9 +19,7 @@ class TubeMaskingGenerator:
         self.total_masks = self.frames * self.num_masks_per_frame
 
     def __repr__(self):
-        repr_str = "Maks: total patches {}, mask patches {}".format(
-            self.total_patches, self.total_masks
-        )
+        repr_str = f"Maks: total patches {self.total_patches}, mask patches {self.total_masks}"
         return repr_str
 
     def __call__(self):
@@ -138,9 +135,7 @@ class TartanAirVideoDataset(data.Dataset):
         self.num_seq = clip_len
 
         # added for mae pretrain
-        self.masked_position_generator = TubeMaskingGenerator(
-            (16 // 2, 224 // 16, 224 // 16), 0.9
-        )
+        self.masked_position_generator = TubeMaskingGenerator((16 // 2, 224 // 16, 224 // 16), 0.9)
 
     # @profile
     def __getitem__(self, index):
@@ -155,9 +150,7 @@ class TartanAirVideoDataset(data.Dataset):
         video_name, start_frame_index = self.clip_indices[index]
 
         item = defaultdict(list)
-        for frame_index in range(
-            start_frame_index, start_frame_index + self.num_seq * self.seq_len
-        ):
+        for frame_index in range(start_frame_index, start_frame_index + self.num_seq * self.seq_len):
             frame_ann = self.ann["ann"][video_name][frame_index]
 
             # Load data.

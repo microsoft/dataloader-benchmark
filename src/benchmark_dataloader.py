@@ -7,10 +7,7 @@ from utils.opts import parse_args
 
 
 def get_tartan_dataset_and_loader(args):
-    data_type = ["image_left"]
-    if args.flow:
-        data_type.append("flow_flow")
-    train_dataset, _, train_loader, _, _ = build_loader(args, data_type)
+    train_dataset, _, train_loader, _, _ = build_loader(args)
     # train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
     return train_dataset, train_loader
 
@@ -24,7 +21,9 @@ def benchmark(args):
     print(f"train_dataloader length {num_batches}")
 
     for batch_idx, batch in enumerate(train_dataloader):
-        batch.cuda()
+        for sample in batch:
+            for modality in args.modalities:
+                sample[modality].cuda()
         if batch_idx == 0:
             first = timer()
         # print(f"batch_idx {batch_idx} took {(timer() - last):.3f} seconds")
@@ -37,18 +36,14 @@ def benchmark(args):
     time_per_batch_without_first = (last - first) / num_batches
 
     print(f"{time_per_batch:.3f} secs per batch")
-    print(
-        f"{time_per_batch_without_first:.3f} secs per batch without counting first batch"
-    )
+    print(f"{time_per_batch_without_first:.3f} secs per batch without counting first batch")
     print(f"{time_first_batch:.3f} secs for the first batch")
 
     mlflow.log_metric(key="num_workers", value=args.workers, step=0)
     mlflow.log_metric(key="batch_size", value=args.batch_size, step=0)
     mlflow.log_metric(key="num_seq", value=args.num_seq, step=0)
     mlflow.log_metric(key="seq_len", value=args.seq_len, step=0)
-    mlflow.log_metric(
-        key="time_per_batch_without_first", value=time_per_batch_without_first, step=0
-    )
+    mlflow.log_metric(key="time_per_batch_without_first", value=time_per_batch_without_first, step=0)
     mlflow.log_metric(key="time_per_batch", value=time_per_batch, step=0)
     mlflow.log_metric(key="time_first_batch", value=time_first_batch, step=0)
 

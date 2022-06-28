@@ -15,28 +15,33 @@ def parse_args():
     parser.add_argument("--local_rank", type=int, default=0)
 
     # ================================== added arguments for TaratanAIR ==============
-    parser.add_argument(
-        "--flow", default=False, type=bool, help="indicate select optical flow or not"
-    )
     parser.add_argument("--img", default=False, type=bool)
     parser.add_argument("--dataloader_mode", default="all", type=str)
     parser.add_argument("--visual_aug", default=False, type=bool)
     parser.add_argument("--flip", default=False, type=bool)
     parser.add_argument(
-        "--use_memory", default=False, help="use multimodal fusion memory"
+        "--modalities",
+        default=["image_left"],
+        help="list of modalities (strings)",
+        nargs="+",
+        type=str,
+        choices=[
+            "image_left",
+            "image_right",
+            "depth_left",
+            "depth_right",
+            "flow_mask",
+            "flow_flow",
+            "seg_left",
+            "seg_right",
+        ],
     )
-    parser.add_argument(
-        "--use_external", default=False, type=bool, help="use memory as external info"
-    )
-    parser.add_argument(
-        "--use_pred", default=False, type=bool, help="use predictive contrastive loss."
-    )
-    parser.add_argument(
-        "--use_inst", default=False, type=bool, help="use instance contrastive loss."
-    )
-    parser.add_argument(
-        "--use_img2img", default=False, type=bool, help="compute img2img loss"
-    )
+
+    parser.add_argument("--use_memory", default=False, help="use multimodal fusion memory")
+    parser.add_argument("--use_external", default=False, type=bool, help="use memory as external info")
+    parser.add_argument("--use_pred", default=False, type=bool, help="use predictive contrastive loss.")
+    parser.add_argument("--use_inst", default=False, type=bool, help="use instance contrastive loss.")
+    parser.add_argument("--use_img2img", default=False, type=bool, help="compute img2img loss")
     parser.add_argument(
         "--use_flow_both",
         default=False,
@@ -58,9 +63,7 @@ def parse_args():
         type=str,
     )
     parser.add_argument("--val_ann_file", default=" ", type=str)
-    parser.add_argument(
-        "--benchmark_results_file", default="benchmark_results.csv", type=str
-    )
+    parser.add_argument("--benchmark_results_file", default="benchmark_results.csv", type=str)
     parser.add_argument("--train_transform", default="", type=str)
     parser.add_argument(
         "--train_transform_aug",
@@ -72,12 +75,8 @@ def parse_args():
     parser.add_argument("--pin_memory", default=True, type=bool)
     parser.add_argument("--img_dim", default=224, type=int)
     parser.add_argument("--img_crop", default=448, type=int)
-    parser.add_argument(
-        "--seq_len", default=1, type=int, help="number of frames in each video block"
-    )
-    parser.add_argument(
-        "--num_seq", default=16, type=int, help="number of video blocks"
-    )
+    parser.add_argument("--seq_len", default=1, type=int, help="number of frames in each video block")
+    parser.add_argument("--num_seq", default=16, type=int, help="number of video blocks")
     parser.add_argument("-j", "--workers", default=0, type=int)
 
     args = parser.parse_args()

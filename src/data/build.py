@@ -6,18 +6,14 @@
 # Modified by Zhenda Xie
 # --------------------------------------------------------
 
-import os
-import sys
 
 import numpy as np
 import torch
-import torch.distributed as dist
 import torch.utils.data
 from PIL import Image, ImageFilter, ImageOps
-from timm.data import Mixup, create_transform
+from timm.data import create_transform
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from torchvision import transforms
-from torchvision.transforms import functional as F
 from utils.utils import ResizeFlowNP
 
 from .tartanair_video import TartanAirVideoDataset
@@ -43,10 +39,10 @@ except:
     from timm.data.transforms import _pil_interp
 
 
-def build_loader(args, data_type):
+def build_loader(args):
 
     # Only prepare training set for MoBY models.
-    dataset_train = build_dataset(is_train=True, args=args, data_type=data_type)
+    dataset_train = build_dataset(is_train=True, args=args)
 
     data_loader_train = torch.utils.data.DataLoader(
         dataset_train,
@@ -89,19 +85,18 @@ def build_loader(args, data_type):
     return dataset_train, dataset_val, data_loader_train, data_loader_val, None
 
 
-def build_dataset(is_train, args, data_type):
+def build_dataset(is_train, args):
     if is_train:
         ann_file = args.train_ann_file
     else:
         ann_file = args.val_ann_file
 
-    transform = build_tartanair_video_transform(is_train, args, data_type)
+    transform = build_tartanair_video_transform(is_train, args)
     dataset = TartanAirVideoDataset(
         ann_file,
         clip_len=args.num_seq,
         seq_len=args.seq_len,
-        # data_types=config.DATA.TARTANAIR.VIDEO.DATA_TYPES,
-        data_types=data_type,
+        data_types=args.modalities,
         transform=transform,
         video_name_keyword=args.video_name_keyword if is_train else None,
     )
@@ -112,19 +107,13 @@ def build_dataset(is_train, args, data_type):
 def build_transform(is_train, config):
     if config.AUG.SSL_AUG:
         if config.AUG.SSL_AUG_TYPE == "byol":
-            normalize = transforms.Normalize(
-                mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-            )
+            normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
             transform_1 = transforms.Compose(
                 [
-                    transforms.RandomResizedCrop(
-                        config.DATA.IMG_SIZE, scale=(config.AUG.SSL_AUG_CROP, 1.0)
-                    ),
+                    transforms.RandomResizedCrop(config.DATA.IMG_SIZE, scale=(config.AUG.SSL_AUG_CROP, 1.0)),
                     transforms.RandomHorizontalFlip(),
-                    transforms.RandomApply(
-                        [transforms.ColorJitter(0.4, 0.4, 0.2, 0.1)], p=0.8
-                    ),
+                    transforms.RandomApply([transforms.ColorJitter(0.4, 0.4, 0.2, 0.1)], p=0.8),
                     transforms.RandomGrayscale(p=0.2),
                     transforms.RandomApply([GaussianBlur()], p=1.0),
                     transforms.ToTensor(),
@@ -133,13 +122,9 @@ def build_transform(is_train, config):
             )
             transform_2 = transforms.Compose(
                 [
-                    transforms.RandomResizedCrop(
-                        config.DATA.IMG_SIZE, scale=(config.AUG.SSL_AUG_CROP, 1.0)
-                    ),
+                    transforms.RandomResizedCrop(config.DATA.IMG_SIZE, scale=(config.AUG.SSL_AUG_CROP, 1.0)),
                     transforms.RandomHorizontalFlip(),
-                    transforms.RandomApply(
-                        [transforms.ColorJitter(0.4, 0.4, 0.2, 0.1)], p=0.8
-                    ),
+                    transforms.RandomApply([transforms.ColorJitter(0.4, 0.4, 0.2, 0.1)], p=0.8),
                     transforms.RandomGrayscale(p=0.2),
                     transforms.RandomApply([GaussianBlur()], p=0.1),
                     transforms.RandomApply([ImageOps.solarize], p=0.2),
@@ -154,9 +139,7 @@ def build_transform(is_train, config):
             raise NotImplementedError
 
     if config.AUG.SSL_LINEAR_AUG:
-        normalize = transforms.Normalize(
-            mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-        )
+        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
         if is_train:
             transform = transforms.Compose(
@@ -184,12 +167,8 @@ def build_transform(is_train, config):
         transform = create_transform(
             input_size=config.DATA.IMG_SIZE,
             is_training=True,
-            color_jitter=config.AUG.COLOR_JITTER
-            if config.AUG.COLOR_JITTER > 0
-            else None,
-            auto_augment=config.AUG.AUTO_AUGMENT
-            if config.AUG.AUTO_AUGMENT != "none"
-            else None,
+            color_jitter=config.AUG.COLOR_JITTER if config.AUG.COLOR_JITTER > 0 else None,
+            auto_augment=config.AUG.AUTO_AUGMENT if config.AUG.AUTO_AUGMENT != "none" else None,
             re_prob=config.AUG.REPROB,
             re_mode=config.AUG.REMODE,
             re_count=config.AUG.RECOUNT,
@@ -198,9 +177,7 @@ def build_transform(is_train, config):
         if not resize_im:
             # replace RandomResizedCropAndInterpolation with
             # RandomCrop
-            transform.transforms[0] = transforms.RandomCrop(
-                config.DATA.IMG_SIZE, padding=4
-            )
+            transform.transforms[0] = transforms.RandomCrop(config.DATA.IMG_SIZE, padding=4)
         return transform
 
     t = []
@@ -208,9 +185,7 @@ def build_transform(is_train, config):
         if config.TEST.CROP:
             size = int((256 / 224) * config.DATA.IMG_SIZE)
             t.append(
-                transforms.Resize(
-                    size, interpolation=_pil_interp(config.DATA.INTERPOLATION)
-                ),
+                transforms.Resize(size, interpolation=_pil_interp(config.DATA.INTERPOLATION)),
                 # to maintain same ratio w.r.t. 224 images
             )
             t.append(transforms.CenterCrop(config.DATA.IMG_SIZE))
@@ -227,7 +202,7 @@ def build_transform(is_train, config):
     return transforms.Compose(t)
 
 
-def build_tartanair_video_transform(is_train, args, data_type):
+def build_tartanair_video_transform(is_train, args):
     if is_train:
         if args.train_transform == "TartanAirVideoTransform":
             return TartanAirVideoTransform(
@@ -238,7 +213,7 @@ def build_tartanair_video_transform(is_train, args, data_type):
             return TartanAirVideoTransformWithAugmentation(
                 center_crop_size=args.img_crop,
                 resize_size=args.img_dim,
-                modality=data_type,
+                modality=args.modalities,
             )
         else:
             raise ValueError()
@@ -276,12 +251,8 @@ class TartanAirVideoTransform:
                 transforms.Normalize(IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD),
             ]
         )
-        self.flow_transform = FlowTransform(
-            center_crop_size=center_crop_size, resize_size=resize_size
-        )
-        self.depth_transform = DepthTransform(
-            center_crop_size=center_crop_size, resize_size=resize_size
-        )
+        self.flow_transform = FlowTransform(center_crop_size=center_crop_size, resize_size=resize_size)
+        self.depth_transform = DepthTransform(center_crop_size=center_crop_size, resize_size=resize_size)
 
     def __call__(self, item):
         transformed_item = {}
@@ -382,9 +353,7 @@ class TartanAirVideoTransformWithAugmentation:
 
         # Photometric augmentation params (only color jittering).
         self.do_color_jitter = do_color_jitter
-        self.color_jitter = transforms.ColorJitter(
-            brightness=0.4, contrast=0.4, saturation=0.4, hue=0.5 / 3.14
-        )
+        self.color_jitter = transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, hue=0.5 / 3.14)
         self.asymmetric_color_aug_prob = 0.2
 
         self.image_transform = transforms.Compose(
@@ -397,12 +366,8 @@ class TartanAirVideoTransformWithAugmentation:
                 transforms.Normalize(IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD),
             ]
         )
-        self.flow_transform = FlowTransform(
-            center_crop_size=center_crop_size, resize_size=resize_size
-        )
-        self.depth_transform = DepthTransform(
-            center_crop_size=center_crop_size, resize_size=resize_size
-        )
+        self.flow_transform = FlowTransform(center_crop_size=center_crop_size, resize_size=resize_size)
+        self.depth_transform = DepthTransform(center_crop_size=center_crop_size, resize_size=resize_size)
 
     # @profile
     def __call__(self, item):
@@ -417,12 +382,8 @@ class TartanAirVideoTransformWithAugmentation:
                 image_stack = np.concatenate(
                     [np.array(x) for x in item["image_left"]], axis=0
                 )  # Shape: [H,W,C]*D -> [D*H,W,C].
-                image_stack = np.array(
-                    self.color_jitter(Image.fromarray(image_stack)), dtype=np.uint8
-                )
-                images = np.split(
-                    image_stack, len(item["image_left"]), axis=0
-                )  # Shape: [D*H,W,C] -> [H,W,C]*D.
+                image_stack = np.array(self.color_jitter(Image.fromarray(image_stack)), dtype=np.uint8)
+                images = np.split(image_stack, len(item["image_left"]), axis=0)  # Shape: [D*H,W,C] -> [H,W,C]*D.
         else:
             images = [np.array(x) for x in item["image_left"]]
 
@@ -438,9 +399,7 @@ class TartanAirVideoTransformWithAugmentation:
             if np.random.rand() < self.h_flip_prob:  # h-flip
                 images = [x[:, ::-1] for x in images]  # Shape: [H,W,C].
                 if "flow_flow" in self.modality:
-                    flows = [
-                        x[:, ::-1] * [-1.0, 1.0] for x in item["flow_flow"]
-                    ]  # Shape: [H,W,2].
+                    flows = [x[:, ::-1] * [-1.0, 1.0] for x in item["flow_flow"]]  # Shape: [H,W,2].
                 if "depth_left" in self.modality:
                     depths = [x[:, ::-1] for x in item["depth_left"]]  # Shape: [H,W,1].
                 if "seg_left" in self.modality:
