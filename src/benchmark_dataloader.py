@@ -14,6 +14,7 @@ def get_tartan_dataset_and_loader(args):
 
 def benchmark(args):
     train_dataset, train_dataloader = get_tartan_dataset_and_loader(args)
+    time_copy = 0.0
     start = timer()
     last = start
     num_batches = len(train_dataloader)
@@ -21,23 +22,29 @@ def benchmark(args):
     print(f"train_dataloader length {num_batches}")
 
     for batch_idx, batch in enumerate(train_dataloader):
+        start_copy = timer()
         for sample in batch:
             for modality in args.modalities:
                 sample[modality].cuda()
+        time_copy = time_copy + (timer() - start_copy)
+
         if batch_idx == 0:
             first = timer()
+
         # print(f"batch_idx {batch_idx} took {(timer() - last):.3f} seconds")
         # last = timer()
 
     last = timer()
 
+    time_copy_per_batch = time_copy / num_batches
     time_first_batch = first - start
     time_per_batch = (last - start) / num_batches
-    time_per_batch_without_first = (last - first) / num_batches
+    time_per_batch_without_first = (last - first) / (num_batches - 1)
 
     print(f"{time_per_batch:.3f} secs per batch")
     print(f"{time_per_batch_without_first:.3f} secs per batch without counting first batch")
     print(f"{time_first_batch:.3f} secs for the first batch")
+    print(f"{time_copy_per_batch:.3f} secs per batch for copying from cpu to gpu")
 
     mlflow.log_metric(key="num_workers", value=args.workers, step=0)
     mlflow.log_metric(key="batch_size", value=args.batch_size, step=0)
@@ -45,11 +52,12 @@ def benchmark(args):
     mlflow.log_metric(key="seq_len", value=args.seq_len, step=0)
     mlflow.log_metric(key="time_per_batch_without_first", value=time_per_batch_without_first, step=0)
     mlflow.log_metric(key="time_per_batch", value=time_per_batch, step=0)
-    mlflow.log_metric(key="time_first_batch", value=time_first_batch, step=0)
+    mlflow.log_metric(key="time_per_batch", value=time_per_batch, step=0)
+    mlflow.log_metric(key="time_copy_per_batch", value=time_copy_per_batch, step=0)
 
     with open(args.benchmark_results_file, "a") as f:
         f.write(
-            f"{args.batch_size}, {args.workers}, {args.num_seq}, {args.seq_len}, {time_per_batch_without_first:.3f},  {time_per_batch:.3f}, {time_first_batch:.3f} \n"
+            f"{args.batch_size}, {args.workers}, {args.num_seq}, {args.seq_len}, {time_per_batch_without_first:.3f},  {time_per_batch:.3f}, {time_first_batch:.3f}, {time_copy_per_batch:.3f}\n"
         )
 
 
