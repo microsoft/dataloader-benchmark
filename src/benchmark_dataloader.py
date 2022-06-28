@@ -1,5 +1,7 @@
 from timeit import default_timer as timer
 
+import mlflow
+
 from data import build_loader
 from utils.opts import parse_args
 
@@ -24,8 +26,8 @@ def benchmark(args):
     for batch_idx, _ in enumerate(train_dataloader):
         if batch_idx == 0:
             first = timer()
-        print(f"batch_idx {batch_idx} took {(timer() - last):.3f} seconds")
-        last = timer()
+        # print(f"batch_idx {batch_idx} took {(timer() - last):.3f} seconds")
+        # last = timer()
 
     last = timer()
 
@@ -38,6 +40,16 @@ def benchmark(args):
         f"{time_per_batch_without_first:.3f} secs per batch without counting first batch"
     )
     print(f"{time_first_batch:.3f} secs for the first batch")
+
+    mlflow.log_metric(key="num_workers", value=args.workers, step=0)
+    mlflow.log_metric(key="batch_size", value=args.batch_size, step=0)
+    mlflow.log_metric(key="num_seq", value=args.num_seq, step=0)
+    mlflow.log_metric(key="seq_len", value=args.seq_len, step=0)
+    mlflow.log_metric(
+        key="time_per_batch_without_first", value=time_per_batch_without_first, step=0
+    )
+    mlflow.log_metric(key="time_per_batch", value=time_per_batch, step=0)
+    mlflow.log_metric(key="time_first_batch", value=time_first_batch, step=0)
 
     with open(args.benchmark_results_file, "a") as f:
         f.write(

@@ -11,6 +11,7 @@ environment:
   image: mm-vmae:latest
   setup:
     - pip install opencv-python
+    - pip install mlflow azureml-mlflow
     - pip install -e .
 
 # $CONFIG_DIR is expanded to the directory of this config file.
@@ -22,6 +23,7 @@ storage:
     storage_account_name: commondatasets2
     container_name: commondatasets
     mount_dir: /mnt/data
+    mount_options: ["--file-cache-timeout-in-seconds=0"]
   custom_output:
     storage_account_name: ramadaanaml
     container_name: mmvmae-benchmark-results
@@ -47,10 +49,10 @@ search:
       env: { AZUREML_COMPUTE_USE_COMMON_RUNTIME: True }
 
   type: grid
-  max_trials: 500
+  max_trials: 1000
   params:
     - name: num_workers
-      values: choice(1, 2, 3, 6)
+      values: choice(1, 3, 6)
 
     - name: batch_size
       values: choice(1, 2, 4, 8, 16, 32, 64)
