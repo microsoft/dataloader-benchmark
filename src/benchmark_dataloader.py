@@ -26,10 +26,6 @@ def benchmark(args):
         for key, value in batch[0].items():
             value.cuda()
         batch[1].cuda()
-        # for sample in batch:
-        # sample[1].cuda()
-        # for modality in args.modalities:
-        # sample[modality].cuda()
         time_copy = time_copy + (timer() - start_copy)
 
         if batch_idx == 0:
@@ -61,7 +57,7 @@ def benchmark(args):
 
     with open(args.benchmark_results_file, "a") as f:
         f.write(
-            f"{args.modality}, {args.train_transform_aug}, {args.batch_size}, {args.workers}, {args.num_seq}, {args.seq_len}, {time_first_batch:.3f}, {time_per_batch:.3f}, {time_per_batch_without_first:.3f}, {time_copy_per_batch:.3f}\n"
+            f"{args.modalities}, {args.train_transform_aug}, {args.batch_size}, {args.workers}, {args.num_seq}, {args.seq_len}, {time_first_batch:.3f}, {time_per_batch:.3f}, {time_per_batch_without_first:.3f}, {time_copy_per_batch:.3f}\n"
         )
 
 

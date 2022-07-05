@@ -213,7 +213,7 @@ def build_tartanair_video_transform(is_train, args):
             return TartanAirVideoTransformWithAugmentation(
                 center_crop_size=args.img_crop,
                 resize_size=args.img_dim,
-                modality=args.modalities,
+                modalities=args.modalities,
             )
         else:
             raise ValueError()
@@ -222,7 +222,7 @@ def build_tartanair_video_transform(is_train, args):
             return TartanAirVideoTransform(
                 center_crop_size=args.img_crop,
                 resize_size=args.img_dim,
-                modality=args.modality,
+                modalities=args.modalities,
             )
         else:
             raise ValueError()
@@ -240,7 +240,7 @@ class GaussianBlur:
 class TartanAirVideoTransform:
     """TartanAir video transform."""
 
-    def __init__(self, center_crop_size=448, resize_size=224, modality=None):
+    def __init__(self, center_crop_size=448, resize_size=224, modalities=None):
         self.image_transform = transforms.Compose(
             [
                 transforms.CenterCrop(
@@ -338,12 +338,12 @@ class TartanAirVideoTransformWithAugmentation:
         self,
         center_crop_size=448,
         resize_size=224,
-        modality=None,
+        modalities=None,
         do_flip=True,
         do_color_jitter=True,
     ):
 
-        self.modality = modality
+        self.modalities = modalities
         # Flip augmentation params.
         self.do_flip = do_flip
         self.h_flip_prob = 0.5
@@ -371,7 +371,7 @@ class TartanAirVideoTransformWithAugmentation:
     def __call__(self, item):
         # TODO: Need a better visualization of these augmentations.
         # 1. Color jittering
-        if (self.do_color_jitter) and ("image_left" in self.modality):
+        if (self.do_color_jitter) and ("image_left" in self.modalities):
             # Asymmetric.
             if np.random.rand() < self.asymmetric_color_aug_prob:
                 images = [np.array(self.color_jitter(x)) for x in item["image_left"]]
@@ -386,48 +386,48 @@ class TartanAirVideoTransformWithAugmentation:
             images = [np.array(x) for x in item["image_left"]]
 
         # 2. Flipping
-        if "flow_flow" in self.modality:
+        if "flow_flow" in self.modalities:
             flows = item["flow_flow"]
-        if "depth_left" in self.modality:
+        if "depth_left" in self.modalities:
             depths = item["depth_left"]
-        if "seg_left" in self.modality:
+        if "seg_left" in self.modalities:
             segs = item["seg_left"]
 
         if self.do_flip:
             if np.random.rand() < self.h_flip_prob:  # h-flip
                 images = [x[:, ::-1] for x in images]  # Shape: [H,W,C].
-                if "flow_flow" in self.modality:
+                if "flow_flow" in self.modalities:
                     flows = [x[:, ::-1] * [-1.0, 1.0] for x in item["flow_flow"]]  # Shape: [H,W,2].
-                if "depth_left" in self.modality:
+                if "depth_left" in self.modalities:
                     depths = [x[:, ::-1] for x in item["depth_left"]]  # Shape: [H,W,1].
-                if "seg_left" in self.modality:
+                if "seg_left" in self.modalities:
                     segs = [x[:, ::-1] for x in item["seg_left"]]  # Shape: [H,W,1].
             if np.random.rand() < self.v_flip_prob:  # v-flip
                 images = [x[::-1, :] for x in images]
-                if "flow_flow" in self.modality:
+                if "flow_flow" in self.modalities:
                     flows = [x[::-1, :] * [1.0, -1.0] for x in item["flow_flow"]]
-                if "depth_left" in self.modality:
+                if "depth_left" in self.modalities:
                     depths = [x[::-1, :] for x in item["depth_left"]]
-                if "seg_left" in self.modality:
+                if "seg_left" in self.modalities:
                     segs = [x[::-1, :] for x in item["seg_left"]]
 
         # 3. Standard transformations
         images = [Image.fromarray(x) for x in images]
 
         transformed_item = {}
-        if "image_left" in self.modality:
+        if "image_left" in self.modalities:
             transformed_item["image_left"] = torch.stack(
                 [self.image_transform(x) for x in images], dim=1
             )  # Shape: [H,W,C]*D -> [C,H,W]*D -> [C,D,H,W].
-        if "flow_flow" in self.modality:
+        if "flow_flow" in self.modalities:
             transformed_item["flow_flow"] = torch.stack(
                 [self.flow_transform(x) for x in flows], dim=1
             )  # Shape: [H,W,2]*D -> [2,H,W]*D -> [2,D,H,W].
-        if "depth_left" in self.modality:
+        if "depth_left" in self.modalities:
             transformed_item["depth_left"] = torch.stack(
                 [self.depth_transform(x) for x in depths], dim=1
             )  # Shape: [H,W,2]*D -> [2,H,W]*D -> [2,D,H,W].
-        if "seg_left" in self.modality:
+        if "seg_left" in self.modalities:
             transformed_item["seg_left"] = torch.stack(
                 [self.depth_transform(x) for x in segs], dim=1
             )  # Shape: [H,W,2]*D -> [2,H,W]*D -> [2,D,H,W].
