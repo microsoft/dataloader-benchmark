@@ -44,7 +44,7 @@ search:
         --num_seq {num_seq}
         --seq_len {seq_len}
         --modalities {modalities}
-        --train_transform_aug {train_transform_aug}
+        --train_transform {train_transform}
     submit_args:
       container_args:
         shm_size: 640g
@@ -55,24 +55,20 @@ search:
   params:
     - name: num_workers
       values: choice(6)
-      # values: choice(4, 6)
-      # values: choice(0, 1, 3, 4, 6)
 
     - name: batch_size
       values: choice(1, 2, 4, 8, 16, 32, 64)
 
     - name: num_seq
       values: choice(1)
-      # values: choice(1, 2, 4, 8)
 
     - name: seq_len
       values: choice(1, 2, 4, 8, 16)
 
     - name: modalities
       values: choice("image_left", "flow_flow", "image_left flow_flow")
-      # values: choice("image_left")
       # values: choice("image_left", "depth_left", "flow_flow")
       # values: choice("image_left", "image_right", "depth_left", "depth_right", "flow_mask", "flow_flow", "seg_left", "seg_right")
 
-    - name: train_transform_aug
+    - name: train_transform
       values: choice("TartanAirVideoTransformWithAugmentation", "TartanAirVideoTransform")

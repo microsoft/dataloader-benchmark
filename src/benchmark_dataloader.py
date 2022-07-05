@@ -57,7 +57,7 @@ def benchmark(args):
 
     with open(args.benchmark_results_file, "a") as f:
         f.write(
-            f"{args.modalities}, {args.train_transform_aug}, {args.batch_size}, {args.workers}, {args.num_seq}, {args.seq_len}, {time_first_batch:.3f}, {time_per_batch:.3f}, {time_per_batch_without_first:.3f}, {time_copy_per_batch:.3f}\n"
+            f"{' '.join(args.modalities)}, {args.train_transform}, {args.batch_size}, {args.workers}, {args.num_seq}, {args.seq_len}, {time_first_batch:.3f}, {time_per_batch:.3f}, {time_per_batch_without_first:.3f}, {time_copy_per_batch:.3f}\n"
         )
 
 

@@ -64,11 +64,11 @@ def parse_args():
     )
     parser.add_argument("--val_ann_file", default=" ", type=str)
     parser.add_argument("--benchmark_results_file", default="benchmark_results.csv", type=str)
-    parser.add_argument("--train_transform", default="", type=str)
     parser.add_argument(
-        "--train_transform_aug",
+        "--train_transform",
         default="TartanAirVideoTransformWithAugmentation",
         type=str,
+        choices=["TartanAirVideoTransform", "TartanAirVideoTransformWithAugmentation"],
     )
     parser.add_argument("--val_transform", default=False, type=bool)
     parser.add_argument("--video_name_keyword", default=None)

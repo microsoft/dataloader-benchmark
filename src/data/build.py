@@ -209,7 +209,7 @@ def build_tartanair_video_transform(is_train, args):
                 center_crop_size=args.img_crop,
                 resize_size=args.img_dim,
             )
-        elif args.train_transform_aug == "TartanAirVideoTransformWithAugmentation":
+        elif args.train_transform == "TartanAirVideoTransformWithAugmentation":
             return TartanAirVideoTransformWithAugmentation(
                 center_crop_size=args.img_crop,
                 resize_size=args.img_dim,
