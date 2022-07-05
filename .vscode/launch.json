@@ -27,15 +27,17 @@
                 "--modalities",
                 "image_left",
                 // "depth_left",
-                // "flow_flow",
+                "flow_flow",
                 "--batch_size",
                 "32",
                 "--workers",
-                "1",
+                "0",
                 "--num_seq",
                 "1",
                 "--seq_len",
-                "16"
+                "16",
+                "--train_transform",
+                "TartanAirVideoTransform"
             ]
         }
     ]

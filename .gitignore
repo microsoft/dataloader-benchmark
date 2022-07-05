@@ -21,8 +21,8 @@ dist/
 *.egg-info/
 
 # data
-data/
-!data/*.py
+# data/
+# !data/*.py
 datasets/
 
 # logs

@@ -285,13 +285,13 @@ class FlowTransform:
         self.center_crop_size = center_crop_size
         self.resize_size = resize_size
         self.flow_normalizer = flow_normalizer
-        self.resize = ResizeFlowNP(size=(resize_size, resize_size), scale_flow=False)
+        self.resize = ResizeFlowNP(size=(resize_size, resize_size), scale_flow=True)
 
     def __call__(self, x):
-        H, W, _ = x.shape
-        ox, oy = int(H / 2) - 1, int(W / 2) - 1
-        delta = int(self.center_crop_size / 2)
-        x = x[ox - delta : ox + delta, oy - delta : oy + delta, :]
+        # H, W, _ = x.shape
+        # ox, oy = int(H/2)-1, int(W/2)-1
+        # delta = int(self.center_crop_size / 2)
+        # x = x[ ox -delta  : ox + delta, oy-delta : oy + delta, :]
 
         x = self.resize(x)  # new added
         x = torch.tensor(x, dtype=torch.float32).permute(2, 0, 1)  # [H,W,C] -> [C,H,W].
@@ -299,10 +299,8 @@ class FlowTransform:
         # assert self.center_crop_size < H and self.center_crop_size < W
         # x = F.center_crop(x, self.center_crop_size)
         # x = F.resize(x, self.resize_size)
-        x = (
-            float(self.resize_size) / float(self.center_crop_size) * x
-        )  # Scaling the values in the flow to match the resize function.
-        x = x / self.flow_normalizer
+        # x = float(self.resize_size) / float(self.center_crop_size) * x  # Scaling the values in the flow to match the resize function.
+        # x = x / self.flow_normalizer
         return x
 
 
@@ -373,7 +371,7 @@ class TartanAirVideoTransformWithAugmentation:
     def __call__(self, item):
         # TODO: Need a better visualization of these augmentations.
         # 1. Color jittering
-        if self.do_color_jitter:
+        if (self.do_color_jitter) and ("image_left" in self.modality):
             # Asymmetric.
             if np.random.rand() < self.asymmetric_color_aug_prob:
                 images = [np.array(self.color_jitter(x)) for x in item["image_left"]]
@@ -417,9 +415,10 @@ class TartanAirVideoTransformWithAugmentation:
         images = [Image.fromarray(x) for x in images]
 
         transformed_item = {}
-        transformed_item["image_left"] = torch.stack(
-            [self.image_transform(x) for x in images], dim=1
-        )  # Shape: [H,W,C]*D -> [C,H,W]*D -> [C,D,H,W].
+        if "image_left" in self.modality:
+            transformed_item["image_left"] = torch.stack(
+                [self.image_transform(x) for x in images], dim=1
+            )  # Shape: [H,W,C]*D -> [C,H,W]*D -> [C,D,H,W].
         if "flow_flow" in self.modality:
             transformed_item["flow_flow"] = torch.stack(
                 [self.flow_transform(x) for x in flows], dim=1
