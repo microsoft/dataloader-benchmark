@@ -66,7 +66,7 @@ search:
       values: choice(1, 2, 4, 8, 16)
 
     - name: modalities
-      values: choice("image_left", "depth_left", "flow_flow", "image_left flow_flow", "image_left depth_left", "image_left depth_left flow_flow"))
+      values: choice("image_left", "depth_left", "flow_flow", "image_left flow_flow", "image_left depth_left", "image_left depth_left flow_flow")
       # values: choice("image_left", "image_right", "depth_left", "depth_right", "flow_mask", "flow_flow", "seg_left", "seg_right")
 
     - name: train_transform
