@@ -101,6 +101,8 @@ class TartanAirVideoDataset(data.Dataset):
         data_types=["image_left", "flow_flow"],
         transform=None,
         video_name_keyword=None,
+        ffcv=False,
+        return_mask_position=False,
     ):
         # Load annotation file.
         root = os.path.dirname(os.path.abspath(ann_file))
@@ -133,9 +135,12 @@ class TartanAirVideoDataset(data.Dataset):
         self.data_types = data_types
         self.transform = transform
         self.num_seq = clip_len
+        self.return_mask_position = return_mask_position
+        self.ffcv = ffcv
 
         # added for mae pretrain
-        self.masked_position_generator = TubeMaskingGenerator((16 // 2, 224 // 16, 224 // 16), 0.9)
+        if self.return_mask_position:
+            self.masked_position_generator = TubeMaskingGenerator((16 // 2, 224 // 16, 224 // 16), 0.9)
 
     # @profile
     def __getitem__(self, index):
@@ -168,23 +173,35 @@ class TartanAirVideoDataset(data.Dataset):
 
                 item[data_type].append(data)
 
-        assert self.transform is not None
-        item = self.transform(
-            item
-        )  # Note: The transform function should transform data and stack them properly for each data type.
+        if self.ffcv:
+            # todo ffcv + mask  is currently not tested
+            if self.masked_position_generator:
+                mask = self.masked_position_generator()
+                return item, mask
+            else:
+                item["image_left"] = np.asarray(item["image_left"])
+                return item
 
-        #### added for COMPASS as  N, C, SL, H, W ########
-        for modality, _ in item.items():
-            seq = item[modality]
-            _, C, H, W = seq.permute(1, 0, 2, 3).shape
-            # (C, H, W) = seq[0].size()
-            # seq = torch.stack(seq, 0)
-            seq = seq.view(self.num_seq, self.seq_len, C, H, W).transpose(1, 2)
-            item[modality] = seq  # N, C, SL, H,  W
+        else:
+            assert self.transform is not None
+            item = self.transform(
+                item
+            )  # Note: The transform function should transform data and stack them properly for each data type.
 
-        mask = self.masked_position_generator()
+            #### added for COMPASS as  N, C, SL, H, W ########
+            for data_type, _ in item.items():
+                seq = item[data_type]
+                _, C, H, W = seq.permute(1, 0, 2, 3).shape
+                # (C, H, W) = seq[0].size()
+                # seq = torch.stack(seq, 0)
+                seq = seq.view(self.num_seq, self.seq_len, C, H, W).transpose(1, 2)
+                item[data_type] = seq  # N, C, SL, H,  W
 
-        return item, mask
+            if self.masked_position_generator:
+                mask = self.masked_position_generator()
+                return item, mask
+            else:
+                return item
 
     def __len__(self):
         return len(self.clip_indices)
