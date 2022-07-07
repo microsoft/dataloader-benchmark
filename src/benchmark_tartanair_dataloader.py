@@ -1,8 +1,8 @@
 from timeit import default_timer as timer
 
 import mlflow
+from tartanair import build_loader
 
-from data import build_loader
 from utils.opts import parse_args
 
 
