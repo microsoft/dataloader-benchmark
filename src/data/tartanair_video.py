@@ -85,7 +85,7 @@ class TartanAirVideoDataset(data.Dataset):
         root (string): Root directory path.
         ann_file (string): Annotation file name.
         clip_len (int): Number of frames in each sampled clip.
-        data_types (List[str]): Data types to include in the sample.
+        modalities (List[str]): Data types to include in the sample.
         transform (callable): A function/transform that takes in
             a sampled clip and returns a transformed version.
      Attributes:
@@ -98,7 +98,7 @@ class TartanAirVideoDataset(data.Dataset):
         ann_file="",
         clip_len=8,
         seq_len=3,
-        data_types=["image_left", "flow_flow"],
+        modalities=["image_left", "flow_flow"],
         transform=None,
         video_name_keyword=None,
         ffcv=False,
@@ -123,8 +123,8 @@ class TartanAirVideoDataset(data.Dataset):
                     # Only use the clips that all used data types are available in each frame.
                     end_frame_index = start_frame_index + clip_len * seq_len - 1
                     if all(
-                        f"{data_type}_rel_path" in video[i]
-                        for data_type in data_types
+                        f"{modality}_rel_path" in video[i]
+                        for modality in modalities
                         for i in range(start_frame_index, end_frame_index + 1)
                     ):
                         self.clip_indices.append((video_name, start_frame_index))
@@ -132,7 +132,7 @@ class TartanAirVideoDataset(data.Dataset):
         # Other settings.
         self.root = root
         self.seq_len = seq_len
-        self.data_types = data_types
+        self.modalities = modalities
         self.transform = transform
         self.num_seq = clip_len
         self.return_mask_position = return_mask_position
@@ -159,8 +159,8 @@ class TartanAirVideoDataset(data.Dataset):
             frame_ann = self.ann["ann"][video_name][frame_index]
 
             # Load data.
-            for data_type in self.data_types:
-                rel_path = frame_ann[f"{data_type}_rel_path"].strip()
+            for modality in self.modalities:
+                rel_path = frame_ann[f"{modality}_rel_path"].strip()
                 path = os.path.join(self.root, rel_path)
                 # print('root, rel_path', self.root, rel_path)
                 ext = os.path.splitext(os.path.basename(path))[1].lower()
@@ -171,7 +171,7 @@ class TartanAirVideoDataset(data.Dataset):
                 else:
                     raise ValueError()
 
-                item[data_type].append(data)
+                item[modality].append(data)
 
         if self.ffcv:
             # todo ffcv + mask  is currently not tested
@@ -189,13 +189,13 @@ class TartanAirVideoDataset(data.Dataset):
             )  # Note: The transform function should transform data and stack them properly for each data type.
 
             #### added for COMPASS as  N, C, SL, H, W ########
-            for data_type, _ in item.items():
-                seq = item[data_type]
+            for modality, _ in item.items():
+                seq = item[modality]
                 _, C, H, W = seq.permute(1, 0, 2, 3).shape
                 # (C, H, W) = seq[0].size()
                 # seq = torch.stack(seq, 0)
                 seq = seq.view(self.num_seq, self.seq_len, C, H, W).transpose(1, 2)
-                item[data_type] = seq  # N, C, SL, H,  W
+                item[modality] = seq  # N, C, SL, H,  W
 
             if self.masked_position_generator:
                 mask = self.masked_position_generator()
