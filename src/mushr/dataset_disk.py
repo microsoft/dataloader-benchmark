@@ -56,7 +56,7 @@ class MushrVideoDataset(torch.utils.data.Dataset):
         # }
 
         ann_path = os.path.join(dataset_dir, ann_file_name)
-        with open(ann_path, "r") as f:
+        with open(ann_path) as f:
             self.ann = json.load(f)
         assert self.ann["type"] == "mushr_sim_pretrain"
 

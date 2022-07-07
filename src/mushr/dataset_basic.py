@@ -71,7 +71,7 @@ class MushrVideoDatasetPreload(torch.utils.data.Dataset):
         # read the entire dataset and append to the main dict
         for video_idx, video_name in enumerate(self.ann["ann"]):
             if video_idx % 200 == 0:
-                print("Done loading {:.2f} % of the videos".format(float(video_idx / (max_num_videos + 1)) * 100.0))
+                print(f"Done loading {float(video_idx / (max_num_videos + 1)) * 100.0:.2f} % of the videos")
 
             if video_idx > max_num_videos:
                 break
@@ -136,7 +136,9 @@ class MushrVideoDatasetPreload(torch.utils.data.Dataset):
             gt_map_name = os.path.join(dataset_dir, gt_map_file_name)
             self.orig_map = cv2.imread(gt_map_name, -1)
             self.orig_map[self.orig_map > 0] = 255  # make the gray area become white, as free space
-            self.orig_map = -(2.0 * self.orig_map / 255.0 - 1.0).astype(np.float32)  # invert colors and normalize to -1,1 range
+            self.orig_map = -(2.0 * self.orig_map / 255.0 - 1.0).astype(
+                np.float32
+            )  # invert colors and normalize to -1,1 range
             # change the color scheme to 0 free to 1 occupied
             self.orig_map[self.orig_map > -1] = 1
 

@@ -1,6 +1,7 @@
 import numpy as np
 import math
 
+
 def norm_angle(angle):
     # normalize all actions
     act_max = 0.38
