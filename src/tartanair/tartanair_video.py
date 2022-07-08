@@ -171,14 +171,14 @@ class TartanAirVideoDataset(data.Dataset):
                 else:
                     raise ValueError()
 
-                item[modality].append(data)
+                item[modality] = data
 
         if self.ffcv:
             for key in item:
                 item[key] = np.asarray(item[key])
 
             # todo ffcv + mask  is currently not tested
-            if self.masked_position_generator:
+            if self.return_mask_position:
                 mask = self.masked_position_generator()
                 return (*item.values(), mask)
 
