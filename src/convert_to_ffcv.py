@@ -90,13 +90,13 @@ def parse_args():
 
 
 def main(args):
-    convert_tartanair(ann_file=args.tartanair_ann, output_beton_file=args.output_beton_file)
+    convert_tartanair(ann_file=args.tartanair_ann, output_beton_file=args.tartanair_output_beton_file)
 
     convert_mushr(
         dataset_dir=args.mushr_dataset_dir,
         ann_file_name=args.mushr_ann_file_name,
         gt_map_file_name=args.mushr_gt_map_file_name,
-        output_beton_file=args.output_beton_file,
+        output_beton_file=args.mushr_output_beton_file,
     )
 
 
