@@ -8,8 +8,7 @@ import torch
 import torchdata.datapipes as dp
 from torch.utils.data import DataLoader
 
-from climate.era5_datapipe import (ERA5Forecast, ERA5Npy, ERA5Zarr,
-                                   IndividualDataIter)
+from climate.era5_datapipe import ERA5Forecast, ERA5Npy, ERA5Zarr, IndividualDataIter
 from utils.utils import AverageMeter
 
 # NPY = False
@@ -31,7 +30,7 @@ def get_datapipe(path, batchsize=32, NPY=False):
         READER = ERA5Zarr
         lister = dp.iter.IterableWrapper(glob.glob(os.path.join(path, "*.zarr")))
 
-    dp = (
+    data = (
         IndividualDataIter(
             ERA5Forecast(
                 READER(
@@ -45,7 +44,7 @@ def get_datapipe(path, batchsize=32, NPY=False):
         .in_batch_shuffle()  # shuffle within a batch, probably not necessary
         .collate(collate_fn)
     )
-    return dp
+    return data
 
 
 def parse_args():
@@ -60,13 +59,15 @@ def parse_args():
     parser.add_argument(
         "--num_workers", type=int, default=1, help="Number of workers for dataloader"
     )
+    args = parser.parse_args()
+    return args
 
 
 def benchmark(args):
     print("===== Benchmarking =====")
-    print(f"Dataset: {args.dataset}")
-    dp = get_datapipe(args.datapath, args.batchsize, args.dataset == "npy")
-    dl = DataLoader(dp, batch_size=None, num_workers=args.num_workers)
+    print(f"Dataset: {args.dataset}\n \t {args.datapath}")
+    data = get_datapipe(args.datapath, args.batchsize, args.dataset == "npy")
+    dl = DataLoader(data, batch_size=None, num_workers=args.num_workers)
     time_copy = 0.0
     num_batches = 0
     start = timer()
@@ -92,7 +93,7 @@ def benchmark(args):
         f"{time_per_batch_without_first:.3f} secs per batch without counting first batch"
     )
     print(f"{time_copy_per_batch:.3f} secs per batch for copying from cpu to gpu")
-    mlflow.log_metric(key="num_workers", value=args.workers, step=0)
+    mlflow.log_metric(key="num_workers", value=args.num_workers, step=0)
     mlflow.log_metric(key="batch_size", value=args.batchsize, step=0)
     mlflow.log_metric(
         key="time_per_batch_without_first", value=time_per_batch_without_first, step=0
