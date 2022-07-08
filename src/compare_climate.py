@@ -22,13 +22,15 @@ def collate_fn(batch):
     return inp, out
 
 
-def get_datapipe(path, batchsize=32, NPY=False):
-    if NPY:
+def get_datapipe(path, batchsize=32, dataformat="npy"):
+    if dataformat == "npy":
         READER = ERA5Npy
         lister = dp.iter.FileLister(path)
-    else:
+    elif dataformat == "zarr":
         READER = ERA5Zarr
         lister = dp.iter.IterableWrapper(glob.glob(os.path.join(path, "*.zarr")))
+    else:
+        raise NotImplementedError(f"Data {dataformat} is not implemented")
 
     data = (
         IndividualDataIter(
@@ -66,7 +68,7 @@ def parse_args():
 def benchmark(args):
     print("===== Benchmarking =====")
     print(f"Dataset: {args.dataset}\n \t {args.datapath}")
-    data = get_datapipe(args.datapath, args.batchsize, args.dataset == "npy")
+    data = get_datapipe(args.datapath, args.batchsize, args.dataset)
     dl = DataLoader(data, batch_size=None, num_workers=args.num_workers)
     time_copy = 0.0
     num_batches = 0
