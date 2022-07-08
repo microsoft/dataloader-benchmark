@@ -201,9 +201,7 @@ def benchmark_mushr_disk(args):
     print(f"Total time: {time.time() - time_start:.3f}")
 
 
-def main():
-    args = parse_args()
-
+def main(args):
     if args.dataset == "mushr":
         benchmark_mushr_ffcv(args)
         benchmark_mushr_pytorch(args)
@@ -217,4 +215,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    main(args)

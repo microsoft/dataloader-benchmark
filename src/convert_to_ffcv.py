@@ -77,6 +77,14 @@ def convert_tartanair(
 def parse_args():
     parser = ArgumentParser()
     parser.add_argument(
+        "--dataset",
+        type=str,
+        default="tartanair",
+        choices=["tartanair", "mushr"],
+        help="Dataset to use for benchmarking",
+    )
+
+    parser.add_argument(
         "--tartanair_ann", type=str, default="/home/saihv/datasets/tartanair-release1/train_ann_abandonedfactory.json"
     )
     parser.add_argument("--tartanair_output_beton_file", type=str, default="./tartan_abandonedfactory.beton")
@@ -94,14 +102,20 @@ def parse_args():
 
 
 def main(args):
-    convert_tartanair(ann_file=args.tartanair_ann, output_beton_file=args.tartanair_output_beton_file)
+    args = parse_args()
+    if args.dataset == "tartanair":
+        convert_tartanair(ann_file=args.tartanair_ann, output_beton_file=args.tartanair_output_beton_file)
 
-    convert_mushr(
-        dataset_dir=args.mushr_dataset_dir,
-        ann_file_name=args.mushr_ann_file_name,
-        gt_map_file_name=args.mushr_gt_map_file_name,
-        output_beton_file=args.mushr_output_beton_file,
-    )
+    elif args.dataset == "mushr":
+        convert_mushr(
+            dataset_dir=args.mushr_dataset_dir,
+            ann_file_name=args.mushr_ann_file_name,
+            gt_map_file_name=args.mushr_gt_map_file_name,
+            output_beton_file=args.mushr_output_beton_file,
+        )
+
+    else:
+        raise ValueError(f"Unknown dataset: {args.dataset}")
 
 
 if __name__ == "__main__":
