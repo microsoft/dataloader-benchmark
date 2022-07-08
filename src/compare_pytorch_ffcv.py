@@ -15,7 +15,6 @@ from mushr.dataset import MushrVideoDatasetPreload
 from mushr.dataset_disk import MushrVideoDataset
 from utils import AverageMeter
 
-
 parser = argparse.ArgumentParser(description="FFCV options")
 parser.add_argument("--order", type=str, default="random", help="Ordering of data: random or quasi_random")
 parser.add_argument("--os_cache", type=lambda x: bool(distutils.util.strtobool(x)))
