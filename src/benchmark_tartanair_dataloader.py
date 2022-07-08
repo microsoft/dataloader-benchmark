@@ -1,19 +1,35 @@
 from timeit import default_timer as timer
 
 import mlflow
-from tartanair import build_loader
 
+from tartanair import build_loader
+from tartanair.build import TartanAirNoTransform, TartanAirVideoDataset
 from utils.opts import parse_args
 
 
-def get_tartan_dataset_and_loader(args):
+def get_tartanair_dataset(args):
     train_dataset, _, train_loader, _, _ = build_loader(args)
     # train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
     return train_dataset, train_loader
 
 
+def get_tartanair_dataset_no_transform(args):
+    dataset = TartanAirVideoDataset(
+        ann_file="/home/saihv/datasets/tartanair-release1/train_ann_abandonedfactory.json",
+        clip_len=1,
+        seq_len=1,
+        modalities=["image_left", "depth_left", "flow_flow"],
+        transform=TartanAirNoTransform(),
+        video_name_keyword=None,
+    )
+
+    dataloader = torch.utils.data.DataLoader(
+        dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers
+    )
+
+
 def benchmark(args):
-    train_dataset, train_dataloader = get_tartan_dataset_and_loader(args)
+    train_dataset, train_dataloader = get_tartanair_dataset(args)
     time_copy = 0.0
     start = timer()
     last = start
@@ -70,7 +86,7 @@ def trace_handler(p):
 def pytorch_profiler_schedule(args):
     from torch.profiler import ProfilerActivity, profile, schedule
 
-    train_dataset, train_dataloader = get_tartan_dataset_and_loader(args)
+    train_dataset, train_dataloader = get_tartanair_dataset(args)
     print(len(train_dataloader))
     with profile(
         activities=[ProfilerActivity.CPU],
