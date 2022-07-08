@@ -275,6 +275,39 @@ class TartanAirVideoTransform:
         return transformed_item
 
 
+class TartanAirNoTransform:
+    """TartanAir video transform."""
+
+    def __init__(self):
+        self.image_transform = transforms.Compose(
+            [
+                transforms.ToTensor(),
+            ]
+        )
+        self.flow_transform = self.image_transform
+        self.depth_transform = self.image_transform
+
+    def __call__(self, item):
+        transformed_item = {}
+        for data_type in item:
+            # TODO: We need to support multiple data types in sub-transforms (e.g. CenterCrop / Resize) for code refactoring.
+            if data_type == "image_left":
+                transform = self.image_transform
+            elif data_type == "flow_flow":
+                transform = self.flow_transform
+            elif data_type == "depth_left":
+                transform = self.depth_transform
+            elif data_type == "seg_left":
+                transform = self.depth_transform
+            else:
+                raise NotImplementedError()
+
+            stacked_data = torch.stack([transform(x) for x in item[data_type]], dim=1)
+            transformed_item[data_type] = stacked_data
+
+        return transformed_item
+
+
 class FlowTransform:
     """Transform for optical flow.
 

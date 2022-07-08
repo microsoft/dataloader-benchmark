@@ -1,5 +1,4 @@
-from ffcv.fields.decoders import (FloatDecoder, NDArrayDecoder,
-                                  SimpleRGBImageDecoder)
+from ffcv.fields.decoders import FloatDecoder, NDArrayDecoder, SimpleRGBImageDecoder
 from ffcv.loader import Loader, OrderOption
 from ffcv.pipeline.compiler import Compiler
 from ffcv.transforms import ToTensor
@@ -14,11 +13,13 @@ import tqdm
 
 from mushr.dataset import MushrVideoDatasetPreload
 from mushr.dataset_disk import MushrVideoDataset
-from utils import AverageMeter
+from tartanair.build import TartanAirNoTransform, TartanAirVideoDataset
+from utils.utils import AverageMeter
 
 
 def parse_args():
-    parser = ArgumentParser(description="FFCV options")
+    parser = argparse.ArgumentParser(description="FFCV options")
+    parser.add_argument("--dataset", type=str, default="tartanair", help="Dataset to use for benchmarking")
     parser.add_argument("--order", type=str, default="random", help="Ordering of data: random or quasi_random")
     parser.add_argument("--os_cache", type=lambda x: bool(distutils.util.strtobool(x)))
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size")
@@ -30,14 +31,14 @@ def parse_args():
 
 
 def get_order_option_ffcv(order):
-    if args.order == "random":
+    if order == "random":
         order_option = OrderOption.RANDOM
-    elif args.order == "quasi_random":
+    elif order == "quasi_random":
         order_option = OrderOption.QUASI_RANDOM
-    elif args.order == "sequential":
+    elif order == "sequential":
         order_option = OrderOption.SEQUENTIAL
     else:
-        raise ValueError(f"Unknown order option: {args.order}")
+        raise ValueError(f"Unknown order option: {order}")
     return order_option
 
 
@@ -72,6 +73,7 @@ def benchmark_mushr_ffcv(args):
 
 
 def benchmark_tartanair_ffcv(args):
+    print("==== TartanAir FFCV ====")
     time_start = time.time()
 
     # Dataset specific
@@ -102,16 +104,21 @@ def benchmark_tartanair_ffcv(args):
 
 
 def benchmark_tartanair_pytorch(args):
+    print("==== TartanAir Disk ====")
+    time_start = time.time()
+
     dataset = TartanAirVideoDataset(
         ann_file="/home/saihv/datasets/tartanair-release1/train_ann_abandonedfactory.json",
         clip_len=1,
         seq_len=1,
         modalities=["image_left", "depth_left", "flow_flow"],
-        transform=None,
+        transform=TartanAirNoTransform(),
         video_name_keyword=None,
     )
 
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=32, shuffle=True, num_workers=12)
+    dataloader = torch.utils.data.DataLoader(
+        dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers
+    )
     batch_time = AverageMeter()
 
     ts = time.time()
@@ -192,3 +199,22 @@ def benchmark_mushr_disk(args):
 
     print(f"Time per batch: {batch_time.avg:.3f}")
     print(f"Total time: {time.time() - time_start:.3f}")
+
+
+def main():
+    args = parse_args()
+
+    if args.dataset == "mushr":
+        benchmark_mushr_ffcv(args)
+        benchmark_mushr_pytorch(args)
+
+    elif args.dataset == "tartanair":
+        benchmark_tartanair_ffcv(args)
+        benchmark_tartanair_pytorch(args)
+
+    else:
+        raise ValueError(f"Unknown dataset: {args.dataset}")
+
+
+if __name__ == "__main__":
+    main()

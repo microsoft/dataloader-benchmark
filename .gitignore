@@ -32,3 +32,5 @@ outputs/
 # env
 .env
 .autoenv
+
+*.beton

@@ -184,6 +184,7 @@ class TartanAirVideoDataset(data.Dataset):
 
         else:
             assert self.transform is not None
+
             item = self.transform(
                 item
             )  # Note: The transform function should transform data and stack them properly for each data type.
@@ -197,7 +198,7 @@ class TartanAirVideoDataset(data.Dataset):
                 seq = seq.view(self.num_seq, self.seq_len, C, H, W).transpose(1, 2)
                 item[modality] = seq  # N, C, SL, H,  W
 
-            if self.masked_position_generator:
+            if self.return_mask_position:
                 mask = self.masked_position_generator()
                 return item, mask
             else:

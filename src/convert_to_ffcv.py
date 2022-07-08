@@ -79,7 +79,7 @@ def parse_args():
     parser.add_argument(
         "--tartanair_ann", type=str, default="/home/saihv/datasets/tartanair-release1/train_ann_abandonedfactory.json"
     )
-    parser.add_argument("--tartanair_output_beton_file", type=str, default="./tartan_abandonedfactory_jpg.beton")
+    parser.add_argument("--tartanair_output_beton_file", type=str, default="./tartan_abandonedfactory.beton")
 
     parser.add_argument(
         "--mushr_dataset_dir", type=str, default="/home/saihv/pretraining_data/hackathon_data_2p5_nonoise3"
