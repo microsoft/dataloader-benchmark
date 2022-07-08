@@ -55,7 +55,7 @@ def convert_tartanair(
         modalities=["image_left", "depth_left", "flow_flow"],
         transform=None,
         video_name_keyword=None,
-        ffcv=False,
+        ffcv=True,
         return_mask_position=False,
     )
 
