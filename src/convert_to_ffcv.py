@@ -88,6 +88,10 @@ def parse_args():
     parser.add_argument("--mushr_gt_map_file_name", type=str, default="bravern_floor.pgm")
     parser.add_argument("--mushr_output_beton_file", type=str, default="./mushr_train_debug.beton")
 
+    args = parser.parse_args()
+
+    return args
+
 
 def main(args):
     convert_tartanair(ann_file=args.tartanair_ann, output_beton_file=args.tartanair_output_beton_file)
