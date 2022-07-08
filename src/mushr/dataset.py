@@ -5,9 +5,10 @@ import os
 import cv2
 import numpy as np
 import torch
-from mushr.dataset_utils import norm_angle, process_relative_poses_deltas_incremental
 from PIL import Image
 from skimage.transform import resize
+
+from mushr.dataset_utils import norm_angle, process_relative_poses_deltas_incremental
 
 
 class MushrVideoDatasetPreload(torch.utils.data.Dataset):
@@ -135,10 +136,10 @@ class MushrVideoDatasetPreload(torch.utils.data.Dataset):
         if self.load_gt_map:
             gt_map_name = os.path.join(dataset_dir, gt_map_file_name)
             self.orig_map = cv2.imread(gt_map_name, -1)
-            self.orig_map[self.orig_map > 0] = 255  # make the gray area become white, as free space
-            self.orig_map = -(2.0 * self.orig_map / 255.0 - 1.0).astype(
-                np.float32
-            )  # invert colors and normalize to -1,1 range
+            # make the gray area become white, as free space
+            self.orig_map[self.orig_map > 0] = 255
+            # invert colors and normalize to -1,1 range
+            self.orig_map = -(2.0 * self.orig_map / 255.0 - 1.0).astype(np.float32)
             # change the color scheme to 0 free to 1 occupied
             self.orig_map[self.orig_map > -1] = 1
 
