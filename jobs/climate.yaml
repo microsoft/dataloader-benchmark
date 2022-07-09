@@ -56,4 +56,4 @@ search:
 
     - name: data
       spec: discrete
-      values: ["--dataset npy --datapath /mnt/data/1.40625_yearly_np", "--dataset zarr --datapath /mnt/data/1.40625_yearly"]
+      values: ["--dataset npy --datapath /mnt/data/1.40625_yearly_np/train", "--dataset zarr --datapath /mnt/data/1.40625_yearly/train"]
