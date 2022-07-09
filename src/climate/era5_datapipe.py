@@ -3,6 +3,17 @@ import torch
 import torchdata.datapipes as dp
 import xarray as xr
 
+NAME_MAP = {
+    "2m_temperature": "t2m",
+    "10m_u_component_of_wind": "u10",
+    "10m_v_component_of_wind": "v10",
+    "u_component_of_wind": "u",
+    "v_component_of_wind": "v",
+    "geopotential": "z",
+    "temperature": "t",
+    "relative_humidity": "r",
+}
+
 
 class ERA5Npy(dp.iter.IterDataPipe):
     def __init__(self, dp: dp.iter.IterDataPipe, variables):
@@ -40,17 +51,11 @@ class ERA5Forecast(dp.iter.IterDataPipe):
         for data in self.dp:
 
             inputs = np.concatenate(
-                [
-                    data[k][0 : -self.predict_range : self.predict_range]
-                    for k in data.keys()
-                ],
+                [data[k][0 : -self.predict_range : self.predict_range] for k in data.keys()],
                 axis=1,
             )
             outputs = np.concatenate(
-                [
-                    data[k][self.predict_range :: self.predict_range]
-                    for k in data.keys()
-                ],
+                [data[k][self.predict_range :: self.predict_range] for k in data.keys()],
                 axis=1,
             )
             yield torch.from_numpy(inputs), torch.from_numpy(outputs)

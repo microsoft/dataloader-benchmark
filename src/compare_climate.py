@@ -8,12 +8,14 @@ import torch
 import torchdata.datapipes as dp
 from torch.utils.data import DataLoader
 
-from climate.era5_datapipe import ERA5Forecast, ERA5Npy, ERA5Zarr, IndividualDataIter
+from climate.era5_datapipe import (NAME_MAP, ERA5Forecast, ERA5Npy, ERA5Zarr,
+                                   IndividualDataIter)
 from utils.utils import AverageMeter
 
 # NPY = False
 # NPY_PATH = "/mnt/data/1.40625/_yearly_np"
 # ZARRY_PATH = "/mnt/data/1.40625_yearly"
+DEFAULT_VARS = list(NAME_MAP.values())
 
 
 def collate_fn(batch):
@@ -37,11 +39,11 @@ def get_datapipe(path, batchsize=32, dataformat="npy"):
             ERA5Forecast(
                 READER(
                     lister.shuffle().sharding_filter(),  # shuffle at the year level  # needed for num_workers > 1
-                    variables=["t", "u10", "v10"],
+                    variables=DEFAULT_VARS,
                 )
             ),
         )
-        .shuffle(buffer_size=1000)  # shuffle at the individual data level
+        .shuffle(buffer_size=10000)  # shuffle at the individual data level
         .batch(batchsize)
         .in_batch_shuffle()  # shuffle within a batch, probably not necessary
         .collate(collate_fn)
@@ -51,16 +53,10 @@ def get_datapipe(path, batchsize=32, dataformat="npy"):
 
 def parse_args():
     parser = argparse.ArgumentParser(description="FFCV options")
-    parser.add_argument(
-        "--dataset", type=str, default="npy", help="Dataset to use for benchmarking"
-    )
+    parser.add_argument("--dataset", type=str, default="npy", help="Dataset to use for benchmarking")
     parser.add_argument("--datapath", type=str, default=None, help="Path to dataset")
-    parser.add_argument(
-        "--batchsize", type=int, default=32, help="Batchsize for dataloader"
-    )
-    parser.add_argument(
-        "--num_workers", type=int, default=1, help="Number of workers for dataloader"
-    )
+    parser.add_argument("--batchsize", type=int, default=32, help="Batchsize for dataloader")
+    parser.add_argument("--num_workers", type=int, default=1, help="Number of workers for dataloader")
     args = parser.parse_args()
     return args
 
@@ -91,15 +87,11 @@ def benchmark(args):
 
     print(f"{time_first_batch:.3f} secs for the first batch")
     print(f"{time_per_batch:.3f} secs per batch")
-    print(
-        f"{time_per_batch_without_first:.3f} secs per batch without counting first batch"
-    )
+    print(f"{time_per_batch_without_first:.3f} secs per batch without counting first batch")
     print(f"{time_copy_per_batch:.3f} secs per batch for copying from cpu to gpu")
     mlflow.log_metric(key="num_workers", value=args.num_workers, step=0)
     mlflow.log_metric(key="batch_size", value=args.batchsize, step=0)
-    mlflow.log_metric(
-        key="time_per_batch_without_first", value=time_per_batch_without_first, step=0
-    )
+    mlflow.log_metric(key="time_per_batch_without_first", value=time_per_batch_without_first, step=0)
     mlflow.log_metric(key="time_per_batch", value=time_per_batch, step=0)
     mlflow.log_metric(key="time_per_batch", value=time_per_batch, step=0)
     mlflow.log_metric(key="time_copy_per_batch", value=time_copy_per_batch, step=0)

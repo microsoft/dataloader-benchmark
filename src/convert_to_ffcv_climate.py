@@ -2,6 +2,7 @@ import glob
 import os
 from argparse import ArgumentParser
 from functools import partial
+from unittest.mock import DEFAULT
 
 import numpy as np
 import torch
@@ -11,8 +12,10 @@ from ffcv.writer import DatasetWriter, handle_sample
 from torch.utils.data import DataLoader
 from tqdm.contrib.concurrent import thread_map
 
-from climate.era5_datapipe import (ERA5Forecast, ERA5Npy, ERA5Zarr,
+from climate.era5_datapipe import (NAME_MAP, ERA5Forecast, ERA5Npy, ERA5Zarr,
                                    IndividualDataIter)
+
+DEFAULT_VARS = list(NAME_MAP.values())
 
 
 def collate_fn(batch):
@@ -37,7 +40,7 @@ def get_noshuffle_datapipe(path, batchsize=1, dataformat="npy"):
     data = (
         READER(
             lister,
-            variables=["t", "u10", "v10"],
+            variables=DEFAULT_VARS,
         )
         .batch(batchsize)
         .collate(collate_fn)
@@ -121,7 +124,7 @@ def convert_climate(args):
             reader = ERA5Npy
         elif args.dataset == "zarr":
             reader = ERA5Zarr
-        return reader(datapipe, variables=["t", "u10", "v10"]).batch(1).collate(collate_fn).map(to_tuple)
+        return reader(datapipe, variables=DEFAULT_VARS).batch(1).collate(collate_fn).map(to_tuple)
 
     filedp = get_lister_dp(args.datapath, dataformat=args.dataset)
 
