@@ -58,7 +58,7 @@ class ERA5Forecast(dp.iter.IterDataPipe):
                 [data[k][self.predict_range :: self.predict_range] for k in data.keys()],
                 axis=1,
             )
-            yield torch.from_numpy(inputs), torch.from_numpy(outputs)
+            yield (inputs), (outputs)
 
 
 class IndividualDataIter(dp.iter.IterDataPipe):

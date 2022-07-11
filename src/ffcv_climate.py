@@ -1,0 +1,78 @@
+from timeit import default_timer as timer
+
+from ffcv.fields.decoders import NDArrayDecoder
+from ffcv.loader import Loader, OrderOption
+from ffcv.pipeline.compiler import Compiler
+from ffcv.transforms import ToTensor
+
+Compiler.set_enabled(False)
+import argparse
+import distutils
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="FFCV options")
+    parser.add_argument("--datapath", type=str, help="Dataset to use for benchmarking")
+    parser.add_argument("--order", type=str, default="random", help="Ordering of data: random or quasi_random")
+    parser.add_argument("--os_cache", type=lambda x: bool(distutils.util.strtobool(x)))
+    parser.add_argument("--batch_size", type=int, default=32, help="Batch size")
+    parser.add_argument("--num_workers", type=int, default=1, help="Number of workers")
+
+    args = parser.parse_args()
+
+    return args
+
+
+def get_order_option_ffcv(order):
+    if order == "random":
+        order_option = OrderOption.RANDOM
+    elif order == "quasi_random":
+        order_option = OrderOption.QUASI_RANDOM
+    elif order == "sequential":
+        order_option = OrderOption.SEQUENTIAL
+    else:
+        raise ValueError(f"Unknown order option: {order}")
+    return order_option
+
+
+def benchmark_climate_ffcv(args):
+    print("===== Benchmarking =====")
+    print(f"Dataset: ffcv\n \t {args.datapath}")
+    PIPELINES = {
+        "inputs": [NDArrayDecoder(), ToTensor()],
+        "outputs": [NDArrayDecoder(), ToTensor()],
+    }
+    loader = Loader(
+        args.datapath,
+        batch_size=args.batch_size,
+        num_workers=args.num_workers,
+        order=get_order_option_ffcv(args.order),
+        os_cache=args.os_cache,
+        pipelines=PIPELINES,
+    )
+    time_copy = 0.0
+    num_batches = 0
+    start = timer()
+    last = start
+    for idx, batch in enumerate(loader):
+        start_copy = timer()
+        x, y = batch[0].cuda(), batch[1].cuda()
+        time_copy += timer() - start_copy
+        num_batches += 1
+        if idx == 0:
+            first = timer()
+
+    last = timer()
+
+    time_copy_per_batch = time_copy / num_batches
+    time_first_batch = first - start
+    time_per_batch = (last - start) / num_batches
+    time_per_batch_without_first = (last - first) / (num_batches - 1)
+    print(f"{time_first_batch:.3f} secs for the first batch")
+    print(f"{time_per_batch:.3f} secs per batch")
+    print(f"{time_per_batch_without_first:.3f} secs per batch without counting first batch")
+    print(f"{time_copy_per_batch:.3f} secs per batch for copying from cpu to gpu")
+
+
+if __name__ == "__main__":
+    benchmark_climate_ffcv(parse_args())

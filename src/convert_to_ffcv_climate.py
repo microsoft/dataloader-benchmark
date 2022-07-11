@@ -12,10 +12,10 @@ from ffcv.writer import DatasetWriter, handle_sample
 from torch.utils.data import DataLoader
 from tqdm.contrib.concurrent import thread_map
 
-from climate.era5_datapipe import (NAME_MAP, ERA5Forecast, ERA5Npy, ERA5Zarr,
-                                   IndividualDataIter)
+from climate.era5_datapipe import NAME_MAP, ERA5Forecast, ERA5Npy, ERA5Zarr, IndividualDataIter
 
-DEFAULT_VARS = list(NAME_MAP.values())
+# DEFAULT_VARS = list(NAME_MAP.values())
+DEFAULT_VARS = ["u10", "v10", "t"]
 
 
 def collate_fn(batch):
@@ -37,10 +37,12 @@ def get_noshuffle_datapipe(path, batchsize=1, dataformat="npy"):
     else:
         raise NotImplementedError(f"Data {dataformat} is not implemented")
 
-    data = (
-        READER(
-            lister,
-            variables=DEFAULT_VARS,
+    data = IndividualDataIter(
+        ERA5Forecast(
+            READER(
+                lister,
+                variables=DEFAULT_VARS,
+            )
         )
         .batch(batchsize)
         .collate(collate_fn)
@@ -62,6 +64,8 @@ def get_lister_dp(path, dataformat="npy"):
 def count_samples_in_datapipe(file, pipeline):
     if isinstance(file, str):
         file = dp.iter.IterableWrapper([file])
+    elif isinstance(file, (list, tuple)):
+        file = dp.iter.IterableWrapper(file)
 
     count = 0
     for dd in pipeline(file):
@@ -113,18 +117,25 @@ def convert_climate(args):
     data = None
     for dd in datap:
         data = dd
-        for k, v in dd.items():
-            print(k, v.shape)
+        for v in dd:
+            print(v.shape)
         break
 
-    writer = DataPipeWriter(args.outfile, {k: NDArrayField(shape=v.shape, dtype=v.dtype) for k, v in data.items()})
+    # writer = DataPipeWriter(args.outfile, {k: NDArrayField(shape=v.shape, dtype=v.dtype) for k, v in data.items()})
+    writer = DataPipeWriter(
+        args.outfile,
+        {
+            "input": NDArrayField(shape=data[0].shape, dtype=data[0].dtype),
+            "output": NDArrayField(shape=data[1].shape, dtype=data[1].dtype),
+        },
+    )
 
     def pipeline(datapipe):
         if args.dataset == "npy":
             reader = ERA5Npy
         elif args.dataset == "zarr":
             reader = ERA5Zarr
-        return reader(datapipe, variables=DEFAULT_VARS).batch(1).collate(collate_fn).map(to_tuple)
+        return IndividualDataIter(ERA5Forecast(reader(datapipe, variables=DEFAULT_VARS))).batch(1).collate(collate_fn)
 
     filedp = get_lister_dp(args.datapath, dataformat=args.dataset)
 
