@@ -2,14 +2,10 @@ import argparse
 import distutils
 from timeit import default_timer as timer
 
+import mlflow
 from ffcv.fields.decoders import NDArrayDecoder
 from ffcv.loader import Loader, OrderOption
-from ffcv.pipeline.compiler import Compiler
 from ffcv.transforms import ToTensor
-
-Compiler.set_enabled(False)
-
-import mlflow
 
 
 def parse_args():
@@ -77,7 +73,7 @@ def benchmark_climate_ffcv(args):
     print(f"{time_per_batch_without_first:.3f} secs per batch without counting first batch")
     print(f"{time_copy_per_batch:.3f} secs per batch for copying from cpu to gpu")
     mlflow.log_metric(key="num_workers", value=args.num_workers, step=0)
-    mlflow.log_metric(key="batch_size", value=args.batchsize, step=0)
+    mlflow.log_metric(key="batch_size", value=args.batch_size, step=0)
     mlflow.log_metric(key="time_per_batch_without_first", value=time_per_batch_without_first, step=0)
     mlflow.log_metric(key="time_per_batch", value=time_per_batch, step=0)
     mlflow.log_metric(key="time_per_batch", value=time_per_batch, step=0)
