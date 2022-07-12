@@ -38,6 +38,28 @@ class ERA5Zarr(dp.iter.IterDataPipe):
             data = xr.open_zarr(path)
             yield {k: data[k].to_numpy() for k in self.variables}
 
+### for pretraining
+class ERA5(dp.iter.IterDataPipe):
+    def __init__(self, dp: ERA5Npy):
+        super().__init__()
+        self.dp = dp
+
+    def __iter__(self):
+        for data in self.dp:
+            np_data = np.concatenate([data[k] for k in data.keys()], axis=1)
+            yield np_data
+
+
+class IndividualDataIter(dp.iter.IterDataPipe):
+    def __init__(self, dp: ERA5):
+        super().__init__()
+        self.dp = dp
+        
+    def __iter__(self):
+        for inp in self.dp:
+            for i in range(inp.shape[0]):
+                # TODO: should we unsqueeze the first dimension?
+                yield inp[i]
 
 class ERA5Forecast(dp.iter.IterDataPipe):
     def __init__(self, dp: ERA5Npy, predict_range: int = 6) -> None:
@@ -61,7 +83,7 @@ class ERA5Forecast(dp.iter.IterDataPipe):
             yield (inputs), (outputs)
 
 
-class IndividualDataIter(dp.iter.IterDataPipe):
+class IndividualForecastDataIter(dp.iter.IterDataPipe):
     def __init__(self, dp: ERA5Forecast):
         super().__init__()
         self.dp = dp

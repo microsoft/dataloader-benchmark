@@ -15,7 +15,7 @@ def parse_args():
     parser.add_argument("--os_cache", type=lambda x: bool(distutils.util.strtobool(x)))
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size")
     parser.add_argument("--num_workers", type=int, default=1, help="Number of workers")
-
+    parser.add_argument("--use", type=str, default="forecast", help="Use forecast or pretrain")
     args = parser.parse_args()
 
     return args
@@ -38,10 +38,15 @@ def benchmark_climate_ffcv(args):
     print(f"Dataset: ffcv\n \t {args.datapath}")
     print(f"Order: {args.order}")
     print(f"OS cache: {args.os_cache}")
-    PIPELINES = {
-        "inputs": [NDArrayDecoder(), ToTensor()],
-        "outputs": [NDArrayDecoder(), ToTensor()],
-    }
+    if args.use == "forecast":
+        PIPELINES = {
+            "inputs": [NDArrayDecoder(), ToTensor()],
+            "outputs": [NDArrayDecoder(), ToTensor()],
+        }
+    elif args.use == "pretrain":
+        PIPELINES = {
+            "trajs": [NDArrayDecoder(), ToTensor()],
+        }
     loader = Loader(
         args.datapath,
         batch_size=args.batch_size,
@@ -56,7 +61,10 @@ def benchmark_climate_ffcv(args):
     last = start
     for idx, batch in enumerate(loader):
         start_copy = timer()
-        x, y = batch[0].cuda(), batch[1].cuda()
+        if args.use == "forecast":
+            x, y = batch[0].cuda(), batch[1].cuda()
+        elif args.use == "pretrain":
+            traj = batch[0].cuda()
         time_copy += timer() - start_copy
         num_batches += 1
         if idx == 0:
