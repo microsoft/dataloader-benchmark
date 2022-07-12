@@ -1,0 +1,65 @@
+description: mmvmae-dataloader-benchmark
+
+target:
+  service: aml
+  # name: F32s-v2-ded
+  name: V100-1x-ded
+
+environment:
+  registry: commondockerimages.azurecr.io
+  username: commondockerimages
+  image: mm-vmae:latest
+  setup:
+    - pip install opencv-python
+    - pip install mlflow azureml-mlflow
+    - pip install -e .
+
+# $CONFIG_DIR is expanded to the directory of this config file.
+code:
+  local_dir: $CONFIG_DIR/../
+
+storage:
+  data:
+    storage_account_name: weatherdatastorage2
+    container_name: datasets
+    mount_dir: /mnt/data
+    mount_options: ["--file-cache-timeout-in-seconds=0"]
+  custom_output:
+    storage_account_name: ramadaanaml
+    container_name: mmvmae-benchmark-results
+    mount_dir: /mnt/data_output
+    is_output: True
+
+search:
+  job_template:
+    # name: job_{experiment_name:s}_{auto:10s}
+    name: job_{auto:10s}
+    sku: G1
+    command:
+      - python src/ffcv_climate.py
+        --datapath /mnt/data/trial/1.40625/{use}/val.beton
+        --batch_size {batch_size}
+        --num_workers {num_workers}
+        --order {order}
+        --use {use}
+    submit_args:
+      container_args:
+        shm_size: 640g
+      env: { AZUREML_COMPUTE_USE_COMMON_RUNTIME: True }
+
+  type: grid
+  max_trials: 1000
+  params:
+    - name: num_workers
+      values: choice(6)
+
+    - name: batch_size
+      values: choice(1, 2, 4, 8, 16, 32, 64)
+
+    - name: order
+      spec: discrete
+      values: ["random", "quasi_random"]
+
+    - name: use
+      spec: discrete
+      values: ["pretrain", "forecast"]
