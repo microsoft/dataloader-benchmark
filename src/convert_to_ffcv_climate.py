@@ -15,7 +15,8 @@ from tqdm.contrib.concurrent import thread_map
 from climate.era5_datapipe import NAME_MAP, ERA5Forecast, ERA5Npy, ERA5Zarr, IndividualDataIter
 
 # DEFAULT_VARS = list(NAME_MAP.values())
-DEFAULT_VARS = ["u10", "v10", "t"]
+# DEFAULT_VARS = ["u10", "v10", "t"]
+DEFAULT_VARS = ["z", "r", "u", "v", "t", "t2m", "u10", "v10"]
 
 
 def collate_fn(batch):

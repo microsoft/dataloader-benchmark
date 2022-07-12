@@ -4,24 +4,32 @@ import os
 from timeit import default_timer as timer
 
 import mlflow
+import numpy as np
 import torch
 import torchdata.datapipes as dp
 from torch.utils.data import DataLoader
 
-from climate.era5_datapipe import (NAME_MAP, ERA5Forecast, ERA5Npy, ERA5Zarr,
-                                   IndividualDataIter)
+from climate.era5_datapipe import NAME_MAP, ERA5Forecast, ERA5Npy, ERA5Zarr, IndividualDataIter
 from utils.utils import AverageMeter
 
 # NPY = False
 # NPY_PATH = "/mnt/data/1.40625/_yearly_np"
 # ZARRY_PATH = "/mnt/data/1.40625_yearly"
-DEFAULT_VARS = list(NAME_MAP.values())
+# DEFAULT_VARS = list(NAME_MAP.values())
+DEFAULT_VARS = ["z", "r", "u", "v", "t", "t2m", "u10", "v10"]
 
 
 def collate_fn(batch):
-    inp = torch.stack([batch[i][0] for i in range(len(batch))])
-    out = torch.stack([batch[i][1] for i in range(len(batch))])
+    inp = np.stack([batch[i][0] for i in range(len(batch))])
+    out = np.stack([batch[i][1] for i in range(len(batch))])
     return inp, out
+
+
+def np_to_th(x):
+    if isinstance(x, np.ndarray):
+        return torch.from_numpy(x)
+    elif isinstance(x, tuple):
+        return tuple(np_to_th(i) for i in x)
 
 
 def get_datapipe(path, batchsize=32, dataformat="npy"):
@@ -47,6 +55,7 @@ def get_datapipe(path, batchsize=32, dataformat="npy"):
         .batch(batchsize)
         .in_batch_shuffle()  # shuffle within a batch, probably not necessary
         .collate(collate_fn)
+        .map(np_to_th)
     )
     return data
 
