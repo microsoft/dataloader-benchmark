@@ -222,3 +222,6 @@ dependencies:
     - werkzeug==2.1.2
     - yarl==1.7.2
     - zipp==3.8.0
+    - cupy-cuda116
+    - ffcv 
+    - numba
