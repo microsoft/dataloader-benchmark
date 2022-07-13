@@ -36,7 +36,7 @@ search:
     name: job_{auto:10s}
     sku: G1
     command:
-      - python src/ffcv_climate.py
+      - python src/benchmarks/ffcv_climate.py
         --datapath /mnt/data/trial/1.40625/{use}/val.beton
         --batch_size {batch_size}
         --num_workers {num_workers}

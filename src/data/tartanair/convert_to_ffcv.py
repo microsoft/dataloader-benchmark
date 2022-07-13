@@ -3,9 +3,8 @@ from argparse import ArgumentParser
 import numpy as np
 from ffcv.fields import NDArrayField, RGBImageField
 from ffcv.writer import DatasetWriter
-
-from mushr.dataset_basic import MushrVideoDatasetPreload
-from tartanair.build import TartanAirVideoDataset
+from src.data.mushr.dataset_basic import MushrVideoDatasetPreload
+from src.data.tartanair.build import TartanAirVideoDataset
 
 
 def convert_mushr(dataset_dir, ann_file_name, gt_map_file_name, output_beton_file):

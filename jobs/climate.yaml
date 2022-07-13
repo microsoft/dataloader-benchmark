@@ -36,7 +36,7 @@ search:
     name: job_{auto:10s}
     sku: G1
     command:
-      - python src/compare_climate.py
+      - python src/benchmarks/compare_climate.py
         {data}
         --batch_size {batch_size}
         --num_workers {num_workers}

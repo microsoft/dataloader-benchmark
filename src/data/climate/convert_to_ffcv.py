@@ -12,7 +12,7 @@ from ffcv.writer import DatasetWriter, handle_sample
 from torch.utils.data import DataLoader
 from tqdm.contrib.concurrent import thread_map
 
-from climate.era5_datapipe import NAME_MAP, ERA5Forecast, ERA5Npy, ERA5Zarr, IndividualDataIter
+from src.data.climate.era5_datapipe import NAME_MAP, ERA5Forecast, ERA5Npy, ERA5Zarr, IndividualDataIter
 
 # DEFAULT_VARS = list(NAME_MAP.values())
 # DEFAULT_VARS = ["u10", "v10", "t"]

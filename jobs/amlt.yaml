@@ -36,7 +36,7 @@ search:
     name: job_{auto:10s}
     sku: G1
     command:
-      - python src/benchmark_dataloader.py
+      - python src/benchmarks/benchmark_dataloader.py
         --train_ann_file /mnt/data/tartanair-release1/train_ann_debug_ratnesh.json
         --benchmark_results_file /mnt/data_output/benchmark_modalities_results.csv
         --batch_size {batch_size}
