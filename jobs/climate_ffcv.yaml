@@ -1,4 +1,4 @@
-description: mmvmae-dataloader-benchmark
+description: dataloader-benchmark
 
 target:
   service: aml
@@ -8,10 +8,9 @@ target:
 environment:
   registry: commondockerimages.azurecr.io
   username: commondockerimages
-  image: mm-vmae:latest
+  image: dataloader-benchmark:latest
+  # image: dataloader-benchmark:PR-3-latest-conda
   setup:
-    - pip install opencv-python
-    - pip install mlflow azureml-mlflow
     - pip install -e .
 
 # $CONFIG_DIR is expanded to the directory of this config file.
@@ -33,7 +32,7 @@ storage:
 search:
   job_template:
     # name: job_{experiment_name:s}_{auto:10s}
-    name: job_{auto:10s}
+    name: climate_ffcv_{auto:10s}
     sku: G1
     command:
       - python src/benchmarks/ffcv_climate.py

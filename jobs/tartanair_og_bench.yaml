@@ -1,4 +1,4 @@
-description: mmvmae-dataloader-benchmark
+description: dataloader-benchmark
 
 target:
   service: aml
@@ -8,10 +8,9 @@ target:
 environment:
   registry: commondockerimages.azurecr.io
   username: commondockerimages
-  image: mm-vmae:latest
+  image: dataloader-benchmark:latest
+  # image: dataloader-benchmark:PR-3-latest-conda
   setup:
-    - pip install opencv-python
-    - pip install mlflow azureml-mlflow
     - pip install -e .
 
 # $CONFIG_DIR is expanded to the directory of this config file.
@@ -33,12 +32,12 @@ storage:
 search:
   job_template:
     # name: job_{experiment_name:s}_{auto:10s}
-    name: job_{auto:10s}
+    name: tartanair_{auto:10s}
     sku: G1
     command:
-      - python src/benchmarks/benchmark_dataloader.py
+      - python src/benchmarks/tartanair_og_dataloader.py
         --train_ann_file /mnt/data/tartanair-release1/train_ann_debug_ratnesh.json
-        --benchmark_results_file /mnt/data_output/benchmark_modalities_results.csv
+        --benchmark_results_file /mnt/data_output/benchmark_modalities_results_new.csv
         --batch_size {batch_size}
         --workers {num_workers}
         --num_seq {num_seq}
@@ -57,17 +56,21 @@ search:
       values: choice(6)
 
     - name: batch_size
-      values: choice(1, 2, 4, 8, 16, 32, 64)
+      # values: choice(1, 2, 4, 8, 16, 32, 64)
+      values: choice(64)
 
     - name: num_seq
       values: choice(1)
 
     - name: seq_len
-      values: choice(1, 2, 4, 8, 16)
+      # values: choice(1, 2, 4, 8, 16)
+      values: choice(1)
 
     - name: modalities
-      values: choice("image_left", "depth_left", "flow_flow", "image_left flow_flow", "image_left depth_left", "image_left depth_left flow_flow")
+      # values: choice("image_left", "depth_left", "flow_flow", "image_left flow_flow", "image_left depth_left", "image_left depth_left flow_flow")
+      values: choice("image_left")
       # values: choice("image_left", "image_right", "depth_left", "depth_right", "flow_mask", "flow_flow", "seg_left", "seg_right")
 
     - name: train_transform
-      values: choice("TartanAirVideoTransformWithAugmentation", "TartanAirVideoTransform")
+      # values: choice("TartanAirVideoTransformWithAugmentation", "TartanAirVideoTransform")
+      values: choice("TartanAirVideoTransform")

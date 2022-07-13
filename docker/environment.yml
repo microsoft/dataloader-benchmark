@@ -18,6 +18,7 @@ dependencies:
   - certifi=2022.6.15=py38h06a4308_0
   - cffi=1.15.0=py38hd667e15_1
   - charset-normalizer=2.0.4=pyhd3eb1b0_0
+  - click=8.0.4=py38h06a4308_0
   - cryptography=37.0.1=py38h9ce1e76_0
   - cudatoolkit=11.3.1=h2bc3f7f_2
   - cytoolz=0.11.0=py38h7b6447c_0
@@ -37,6 +38,7 @@ dependencies:
   - intel-openmp=2021.4.0=h06a4308_3561
   - ipython=8.2.0=py38h06a4308_0
   - jedi=0.18.1=py38h06a4308_1
+  - jinja2=3.0.3=pyhd3eb1b0_0
   - jpeg=9e=h7f8727e_0
   - lame=3.100=h7b6447c_0
   - lcms2=2.12=h3be6417_0
@@ -95,6 +97,7 @@ dependencies:
   - pytorch=1.12.0=py3.8_cuda11.3_cudnn8.3.2_0
   - pytorch-mutex=1.0=cuda
   - pytz=2022.1=py38h06a4308_0
+  - pyyaml=6.0=py38h7f8727e_1
   - readline=8.1.2=h7f8727e_1
   - requests=2.27.1=pyhd3eb1b0_0
   - setuptools=61.2.0=py38h06a4308_0
@@ -128,56 +131,67 @@ dependencies:
       - aiosignal==1.2.0
       - alembic==1.8.0
       - antlr4-python3-runtime==4.9.3
+      - assertpy==1.1
       - async-timeout==4.0.2
       - attrs==21.4.0
+      - azure-common==1.1.28
+      - azure-core==1.24.2
+      - azure-identity==1.10.0
+      - azure-mgmt-core==1.3.1
+      - azure-storage-blob==12.9.0
+      - azureml-mlflow==1.43.0.post1
       - black==22.3.0
+      - braceexpand==0.1.7
       - cachetools==5.2.0
       - cfgv==3.3.1
-      - click==8.1.3
       - cloudpickle==2.1.0
+      - cupy-cuda116==10.6.0
       - cycler==0.11.0
       - databricks-cli==0.17.0
       - distlib==0.3.4
-      - docker==5.0.3
       - docstring-parser==0.14.1
-      - entrypoints==0.4
+      - fastargs==1.2.0
+      - fastrlock==0.8
+      - ffcv==0.0.3
       - filelock==3.7.1
       - flake8==4.0.1
-      - flask==2.1.2
       - fonttools==4.33.3
       - frozenlist==1.3.0
       - fsspec==2022.5.0
       - gcsfs==2022.5.0
-      - gitdb==4.0.9
-      - gitpython==3.1.27
       - google-api-core==2.8.2
       - google-auth==2.7.0
       - google-auth-oauthlib==0.4.6
       - google-cloud-core==2.3.1
       - google-cloud-storage==2.4.0
-      - google-crc32c==1.3.0
       - google-resumable-media==2.3.3
       - googleapis-common-protos==1.56.3
-      - greenlet==1.1.2
       - grpcio==1.46.3
-      - gunicorn==20.1.0
       - identify==2.5.1
+      - imgcat==0.5.0
       - importlib-metadata==4.11.4
       - importlib-resources==5.8.0
       - iniconfig==1.1.1
+      - isodate==0.6.1
       - isort==5.10.1
-      - itsdangerous==2.1.2
-      - jinja2==3.1.2
+      - joblib==1.1.0
       - jsonargparse==4.9.0
+      - jsonpickle==2.2.0
       - kiwisolver==1.4.3
+      - llvmlite==0.38.1
       - mako==1.2.1
       - markdown==3.3.7
       - matplotlib==3.5.2
       - mccabe==0.6.1
       - mlflow==1.27.0
+      - mlflow-skinny==1.27.0
+      - msal==1.18.0
+      - msal-extensions==1.0.0
+      - msrest==0.7.1
       - multidict==6.0.2
       - mypy-extensions==0.4.3
       - nodeenv==1.6.0
+      - numba==0.55.2
       - oauthlib==3.2.0
       - omegaconf==2.2.2
       - opencv-python==4.6.0.66
@@ -186,7 +200,6 @@ dependencies:
       - platformdirs==2.5.2
       - pluggy==1.0.0
       - pre-commit==2.19.0
-      - prometheus-client==0.14.1
       - prometheus-flask-exporter==0.20.2
       - protobuf==3.19.4
       - py==1.11.0
@@ -195,33 +208,31 @@ dependencies:
       - pycodestyle==2.8.0
       - pydeprecate==0.3.2
       - pyflakes==2.4.0
-      - pyjwt==2.4.0
       - pyparsing==3.0.9
       - pytest==7.1.2
       - pytorch-lightning==1.6.4
-      - pyyaml==6.0
-      - querystring-parser==1.2.4
+      - pytorch-pfn-extras==0.5.8
       - requests-oauthlib==1.3.1
       - rsa==4.8
+      - scikit-learn==1.1.1
       - scipy==1.8.1
       - sh==1.14.2
-      - smmap==5.0.0
+      - sklearn==0.0
       - sqlalchemy==1.4.39
-      - sqlparse==0.4.2
       - tabulate==0.8.10
       - tensorboard==2.9.1
       - tensorboard-data-server==0.6.1
       - tensorboard-plugin-wit==1.8.1
+      - terminaltables==3.1.10
+      - threadpoolctl==3.1.0
       - timm==0.5.4
       - toml==0.10.2
       - tomli==2.0.1
       - torchmetrics==0.9.1
       - tqdm==4.64.0
       - virtualenv==20.14.1
+      - webdataset==0.2.5
       - websocket-client==1.3.3
       - werkzeug==2.1.2
       - yarl==1.7.2
       - zipp==3.8.0
-      - cupy-cuda116
-      - ffcv
-      - numba
