@@ -14,19 +14,14 @@ variables:
   # Container registry service connection established during pipeline creation
   dockerRegistryServiceConnection: "442ea973-c852-4792-aa09-fab4a9df791f"
 
-  imageRepository: "dataloader_benchmark"
   containerRegistry: "commondockerimages.azurecr.io"
 
   dockerfilecondaPath: "$(Build.SourcesDirectory)/docker/Dockerfile_base_conda"
-  tagCurrentConda: "$(Build.SourceBranchName)_$(Build.BuildNumber)-conda"
   tagLatestConda: "latest-conda"
   tagLatest: "latest"
 
   # Agent VM image name
   vmImageName: "ubuntu-latest"
-
-  # docker image names for pytest
-  docker_base_azureml: $(containerRegistry)/$(imageRepository):$(tag_conda)
 
 stages:
   # docs: https://docs.microsoft.com/azure/devops/pipelines/languages/docker
@@ -43,7 +38,16 @@ stages:
               github_organization_prefix="AutonomousSystemsResearch/"
               full_repo_name=$(Build.Repository.Name)
               repo_name=${full_repo_name#"$github_organization_prefix"}
-              git_short_hash_wrong=`git rev-parse --short=7 HEAD`  ## At least 7 digits, more if needed for uniqueness
+
+              git_short_hash_main=`git rev-parse --short=7 HEAD`
+              git_hash_pr=$(System.PullRequest.SourceCommitId)
+              git_short_hash_pr=${git_hash_pr:0:7}
+              pr_number=$(System.PullRequest.PullRequestNumber)
+
+              tag_main_git_commit=main-$git_short_hash_main-conda
+              tag_pr_git_commit=PR-$pr_number-$git_short_hash_pr-conda
+              tag_pr_latest=PR-$pr_number-latest-conda
+
               echo ""
               echo "full repo name:  $(Build.Repository.Name)"
               echo "repo name:  $repo_name"
@@ -51,36 +55,37 @@ stages:
               echo "Build BuildNumber:  $(Build.BuildNumber)"
               echo "Build Reason:  $(Build.Reason)"
               echo "Build Branch Name:  $(Build.SourceBranchName)"
-              echo "PullRequest.SourceBranch: $(System.PullRequest.SourceBranch)"
-              echo "PullRequestNumber: $(System.PullRequest.PullRequestNumber)"
-              echo "PullRequestId: $(System.PullRequest.PullRequestId)"
-              echo "Build.SourceVersion git hash (wrong):  $(Build.SourceVersion)"
-              echo "System.PullRequest.SourceCommitId (right): $(System.PullRequest.SourceCommitId)"
-              echo "Git commit message: $(Build.SourceVersionMessage)"
-              echo "Short git hash wrong: $git_short_hash_wrong"
-              git_hash=$(System.PullRequest.SourceCommitId):0:7
-              git_short_hash=${git_hash:0:7}
-              pr_number=$(System.PullRequest.PullRequestNumber)
-              echo "Short git hash : $git_short_hash"
+              echo "git commit message: $(Build.SourceVersionMessage)"
+              echo "git hash (main branch):  $(Build.SourceVersion)"
+              echo "git hash short (main branch): $git_short_hash_main"
+              echo "PR branch: $(System.PullRequest.SourceBranch)"
+              echo "PR number: $(System.PullRequest.PullRequestNumber)"
+              echo "PR ID: $(System.PullRequest.PullRequestId)"
+              echo "git hash (PR branch): $(System.PullRequest.SourceCommitId)"
+              echo "git hash short (PR branch): : $git_short_hash_pr"
+
+              # set pipeline variables which can be referenced in the jobs that follow to tag docker images appropriately
               echo "##vso[task.setvariable variable=repo_name]$repo_name"
-              pr_number_git_commit_tag=PR-$pr_number-$git_short_hash-conda
-              pr_number_latest_tag=PR-$pr_number-latest-conda
-              echo "##vso[task.setvariable variable=tagPRCurrentCondaGitCommitHash]$pr_number_git_commit_tag"
-              echo "##vso[task.setvariable variable=tagPRCurrentCondaLatest]$pr_number_latest_tag"
+              echo "##vso[task.setvariable variable=tagMainCurrentCondaGitCommitHash]$tag_main_git_commit"
+              echo "##vso[task.setvariable variable=tagPRCurrentCondaGitCommitHash]$tag_pr_git_commit"
+              echo "##vso[task.setvariable variable=tagPRCurrentCondaLatest]$tag_pr_latest"
+              echo "##vso[task.setvariable variable=repoName]$repo_name"
             workingDirectory: $(Build.SourcesDirectory)
-            displayName: Print git info
+            displayName: (debug) print git info
 
           - bash: |
+              echo "repoName: $(repoName)"
+              echo "tagMainCurrentCondaGitCommitHash: $(tagMainCurrentCondaGitCommitHash)"
               echo "tagPRCurrentCondaGitCommitHash: $(tagPRCurrentCondaGitCommitHash)"
               echo "tagPRCurrentCondaLatest: $(tagPRCurrentCondaLatest)"
             workingDirectory: $(Build.SourcesDirectory)
-            displayName: Print docker tags for PR
+            displayName: (debug) print pipeline vars
 
           - task: Docker@2
             displayName: Build and Push Image
             inputs:
               command: buildAndPush
-              repository: $(imageRepository)
+              repository: $(repoName)
               dockerfile: $(dockerfilecondaPath)
               containerRegistry: $(dockerRegistryServiceConnection)
               ${{ if eq(variables['Build.SourceBranchName'], 'merge') }}:
@@ -90,12 +95,12 @@ stages:
 
               ${{ if eq(variables['Build.SourceBranchName'], 'main') }}:
                 tags: |
-                  $(tagCurrentConda)
+                  $(tagMainCurrentCondaGitCommitHash)
                   $(tagLatestConda)
                   $(tagLatest)
 
           # - bash: |
-          #     docker run -d -i --name testapp -v $(Build.SourcesDirectory):/workdir -w /workdir $(containerRegistry)/$(imageRepository):$(tagCurrentConda)
+          #     docker run -d -i --name testapp -v $(Build.SourcesDirectory):/workdir -w /workdir $(containerRegistry)/$(repoName):$(tagCurrentConda)
           #   displayName: Run docker container
 
           # - script: |
