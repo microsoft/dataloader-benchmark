@@ -39,6 +39,7 @@ search:
         {data}
         --batch_size {batch_size}
         --num_workers {num_workers}
+        --use {use}
     submit_args:
       container_args:
         shm_size: 640g
@@ -52,6 +53,10 @@ search:
 
     - name: batch_size
       values: choice(1, 2, 4, 8, 16, 32, 64)
+
+    - name: use
+      spec: discrete
+      values: ["pretrain", "forecast"]
 
     - name: data
       spec: discrete
