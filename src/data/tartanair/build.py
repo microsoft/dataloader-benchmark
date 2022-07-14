@@ -11,10 +11,10 @@ import numpy as np
 import torch
 import torch.utils.data
 from PIL import Image, ImageFilter, ImageOps
+from src.utils.utils import ResizeFlowNP
 from timm.data import create_transform
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from torchvision import transforms
-from utils.utils import ResizeFlowNP
 
 from .tartanair_video import TartanAirVideoDataset
 
@@ -96,7 +96,7 @@ def build_dataset(is_train, args):
         ann_file,
         clip_len=args.num_seq,
         seq_len=args.seq_len,
-        data_types=args.modalities,
+        modalities=args.modalities,
         transform=transform,
         video_name_keyword=args.video_name_keyword if is_train else None,
     )

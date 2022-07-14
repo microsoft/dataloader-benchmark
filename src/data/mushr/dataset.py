@@ -8,7 +8,7 @@ import torch
 from PIL import Image
 from skimage.transform import resize
 
-from mushr.dataset_utils import norm_angle, process_relative_poses_deltas_incremental
+from src.data.mushr.dataset_utils import norm_angle, process_relative_poses_deltas_incremental
 
 
 class MushrVideoDatasetPreload(torch.utils.data.Dataset):

@@ -10,11 +10,10 @@ import time
 
 import torch
 import tqdm
-
-from mushr.dataset import MushrVideoDatasetPreload
-from mushr.dataset_disk import MushrVideoDataset
-from tartanair.build import TartanAirNoTransform, TartanAirVideoDataset
-from utils.utils import AverageMeter
+from src.data.mushr.dataset import MushrVideoDatasetPreload
+from src.data.mushr.dataset_disk import MushrVideoDataset
+from src.data.tartanair.build import TartanAirNoTransform, TartanAirVideoDataset
+from src.utils.utils import AverageMeter
 
 
 def parse_args():

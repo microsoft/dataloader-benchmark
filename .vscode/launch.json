@@ -16,7 +16,7 @@
             "name": "Python: benchmark_debug_1",
             "type": "python",
             "request": "launch",
-            "program": "src/benchmark_dataloader.py",
+            "program": "src/benchmarks/tartanair_og_dataloader.py",
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [

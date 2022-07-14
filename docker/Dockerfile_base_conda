@@ -28,7 +28,9 @@ RUN apt-get update && apt-get install -y --allow-downgrades --allow-change-held-
     ffmpeg \
     libfontconfig1 \
     libxrender1 \
-    libgl1-mesa-glx &&\
+    libgl1-mesa-glx\
+    libturbojpeg-dev\
+    libopencv-dev &&\
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 ADD environment.yml /tmp/environment.yml

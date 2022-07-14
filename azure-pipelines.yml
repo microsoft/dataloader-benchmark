@@ -73,6 +73,21 @@ stages:
             workingDirectory: $(Build.SourcesDirectory)
             displayName: (debug) print git info
 
+          # - bash: |
+          #     lsblk; echo -e "\n\n\n"
+          #     docker images; echo -e "\n\n\n"
+          #     docker ps; echo -e "\n\n\n"
+          #     docker system df --verbose; echo -e "\n\n\n"
+          #     docker system df; echo -e "\n\n\n"
+          #     docker image prune --all; echo -e "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+          #     lsblk; echo -e "\n\n\n"
+          #     docker images; echo -e "\n\n\n"
+          #     docker ps; echo -e "\n\n\n"
+          #     docker system df --verbose; echo -e "\n\n\n"
+          #     docker system df; echo -e "\n\n\n"
+          #   workingDirectory: $(Build.SourcesDirectory)
+          #   displayName: (debug) fake space exploration
+
           - bash: |
               echo "repoName: $(repoName)"
               echo "tagMainCurrentCondaGitCommitHash: $(tagMainCurrentCondaGitCommitHash)"
