@@ -7,16 +7,16 @@ import mlflow
 import numpy as np
 import torch
 import torchdata.datapipes as dp
+from torch.utils.data import DataLoader
+
 from src.data.climate.era5_datapipe import (
     ERA5,
-    NAME_MAP,
     ERA5Forecast,
     ERA5Npy,
     ERA5Zarr,
     IndividualDataIter,
     IndividualForecastDataIter,
 )
-from torch.utils.data import DataLoader
 
 # NPY = False
 # NPY_PATH = "/mnt/data/1.40625/_yearly_np"

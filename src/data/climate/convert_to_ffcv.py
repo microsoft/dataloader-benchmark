@@ -2,17 +2,19 @@ import glob
 import os
 from argparse import ArgumentParser
 from functools import partial
-from unittest.mock import DEFAULT
 
 import numpy as np
-import torch
 import torchdata.datapipes as dp
 from ffcv.fields import NDArrayField
 from ffcv.writer import DatasetWriter, handle_sample
-from torch.utils.data import DataLoader
 from tqdm.contrib.concurrent import thread_map
 
-from src.data.climate.era5_datapipe import NAME_MAP, ERA5Forecast, ERA5Npy, ERA5Zarr, IndividualDataIter
+from src.data.climate.era5_datapipe import (
+    ERA5Forecast,
+    ERA5Npy,
+    ERA5Zarr,
+    IndividualDataIter,
+)
 
 # DEFAULT_VARS = list(NAME_MAP.values())
 # DEFAULT_VARS = ["u10", "v10", "t"]

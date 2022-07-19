@@ -17,6 +17,7 @@ variables:
   containerRegistry: "commondockerimages.azurecr.io"
 
   dockerfilecondaPath: "$(Build.SourcesDirectory)/docker/Dockerfile_base_conda"
+  dockerfilecondaPathFfcv: "$(Build.SourcesDirectory)/docker/Dockerfile_base_conda_ffcv"
   tagLatestConda: "latest-conda"
   tagLatest: "latest"
 
@@ -26,28 +27,25 @@ variables:
 stages:
   # docs: https://docs.microsoft.com/azure/devops/pipelines/languages/docker
   - stage: BuildDockerImagesAndRunPytest
-    displayName: Build docker; run pytests on built images
+    displayName: Build docker images
     jobs:
-      - job: BuildDockerAzureMLBaseAndConda
-        displayName: docker build azureml base; run pytest
+      - job: DefineDockerTags
+        displayName: define docker tags
         pool:
           vmImage: $(vmImageName)
-
         steps:
           - bash: |
               github_organization_prefix="AutonomousSystemsResearch/"
               full_repo_name=$(Build.Repository.Name)
               repo_name=${full_repo_name#"$github_organization_prefix"}
-
+              branch_name=$(Build.SourceBranchName)
               git_short_hash_main=`git rev-parse --short=7 HEAD`
               git_hash_pr=$(System.PullRequest.SourceCommitId)
               git_short_hash_pr=${git_hash_pr:0:7}
               pr_number=$(System.PullRequest.PullRequestNumber)
-
-              tag_main_git_commit=main-$git_short_hash_main-conda
-              tag_pr_git_commit=PR-$pr_number-$git_short_hash_pr-conda
-              tag_pr_latest=PR-$pr_number-latest-conda
-
+              tag_main_git_commit=main-$git_short_hash_main
+              tag_pr_git_commit=PR-$pr_number-$git_short_hash_pr
+              tag_pr_latest=PR-$pr_number-latest
               echo ""
               echo "full repo name:  $(Build.Repository.Name)"
               echo "repo name:  $repo_name"
@@ -63,39 +61,44 @@ stages:
               echo "PR ID: $(System.PullRequest.PullRequestId)"
               echo "git hash (PR branch): $(System.PullRequest.SourceCommitId)"
               echo "git hash short (PR branch): : $git_short_hash_pr"
-
               # set pipeline variables which can be referenced in the jobs that follow to tag docker images appropriately
-              echo "##vso[task.setvariable variable=repo_name]$repo_name"
-              echo "##vso[task.setvariable variable=tagMainCurrentCondaGitCommitHash]$tag_main_git_commit"
-              echo "##vso[task.setvariable variable=tagPRCurrentCondaGitCommitHash]$tag_pr_git_commit"
-              echo "##vso[task.setvariable variable=tagPRCurrentCondaLatest]$tag_pr_latest"
-              echo "##vso[task.setvariable variable=repoName]$repo_name"
-            workingDirectory: $(Build.SourcesDirectory)
+              echo "##vso[task.setvariable variable=repoName;isoutput=true]$repo_name"
+              echo "##vso[task.setvariable variable=tagPRLatest;isoutput=true]$tag_pr_latest"
+              if [[ "$branch_name" == "main" ]]; then
+                echo "##vso[task.setvariable variable=tagOfThisBuild;isoutput=true]$tag_main_git_commit"
+              fi
+              if [[ "$branch_name" == "merge" ]]; then
+                echo "##vso[task.setvariable variable=tagOfThisBuild;isoutput=true]$tag_pr_git_commit"
+              fi
+              ## deprecated; but might be of use in the future
+              # echo "##vso[task.setvariable variable=tagMainGitCommitHash;isoutput=true]$tag_main_git_commit"
+              # echo "##vso[task.setvariable variable=tagPRGitCommitHash;isoutput=true]$tag_pr_git_commit"
+              # print tags:
+              echo "tag_pr_latest:  $tag_pr_latest"
+              echo "tag_pr_git_commit:  $tag_pr_git_commit"
+              echo "tag_main_git_commit:  $tag_main_git_commit"
+              # print outputvars:
+              echo "tag_pr_latest:  $tag_pr_latest"
+              echo "tag_pr_git_commit:  $tag_pr_git_commit"
+              echo "tag_main_git_commit:  $tag_main_git_commit"
+            name: DockerTagVars # because we're going to depend on it, we need to name the step
             displayName: (debug) print git info
 
-          # - bash: |
-          #     lsblk; echo -e "\n\n\n"
-          #     docker images; echo -e "\n\n\n"
-          #     docker ps; echo -e "\n\n\n"
-          #     docker system df --verbose; echo -e "\n\n\n"
-          #     docker system df; echo -e "\n\n\n"
-          #     docker image prune --all; echo -e "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
-          #     lsblk; echo -e "\n\n\n"
-          #     docker images; echo -e "\n\n\n"
-          #     docker ps; echo -e "\n\n\n"
-          #     docker system df --verbose; echo -e "\n\n\n"
-          #     docker system df; echo -e "\n\n\n"
-          #   workingDirectory: $(Build.SourcesDirectory)
-          #   displayName: (debug) fake space exploration
-
+      - job: BuildDockerAzureMLBaseAndConda
+        dependsOn: DefineDockerTags
+        displayName: docker build azureml base
+        pool:
+          vmImage: $(vmImageName)
+        variables:
+          tagOfThisBuild: $[ dependencies.DefineDockerTags.outputs['DockerTagVars.tagOfThisBuild'] ]
+          tagPRLatest: $[ dependencies.DefineDockerTags.outputs['DockerTagVars.tagPRLatest'] ]
+          repoName: $[ dependencies.DefineDockerTags.outputs['DockerTagVars.repoName'] ]
+        steps:
           - bash: |
               echo "repoName: $(repoName)"
-              echo "tagMainCurrentCondaGitCommitHash: $(tagMainCurrentCondaGitCommitHash)"
-              echo "tagPRCurrentCondaGitCommitHash: $(tagPRCurrentCondaGitCommitHash)"
-              echo "tagPRCurrentCondaLatest: $(tagPRCurrentCondaLatest)"
-            workingDirectory: $(Build.SourcesDirectory)
+              echo "tagOfThisBuild: $(tagOfThisBuild)"
+              echo "tagPRLatest: $(tagPRLatest)"
             displayName: (debug) print pipeline vars
-
           - task: Docker@2
             displayName: Build and Push Image
             inputs:
@@ -105,19 +108,42 @@ stages:
               containerRegistry: $(dockerRegistryServiceConnection)
               ${{ if eq(variables['Build.SourceBranchName'], 'merge') }}:
                 tags: |
-                  $(tagPRCurrentCondaGitCommitHash)
-                  $(tagPRCurrentCondaLatest)
-
+                  $(tagOfThisBuild)-conda
+                  $(tagPRLatest)-conda
+                  $(tagPRLatest)
               ${{ if eq(variables['Build.SourceBranchName'], 'main') }}:
                 tags: |
-                  $(tagMainCurrentCondaGitCommitHash)
-                  $(tagLatestConda)
+                  $(tagOfThisBuild)-conda
+                  $(tagLatest)-conda
                   $(tagLatest)
 
-          # - bash: |
-          #     docker run -d -i --name testapp -v $(Build.SourcesDirectory):/workdir -w /workdir $(containerRegistry)/$(repoName):$(tagCurrentConda)
-          #   displayName: Run docker container
-
-          # - script: |
-          #     docker exec testapp bash -c "pip install -e .; pytest tests/test_dev_fast_run.py -k test_fast_dev_run_cpu"
-          #   displayName: Run Pytest on Current Build
+      - job: BuildDockerAzureMLBaseAndCondaFfcv
+        dependsOn: DefineDockerTags
+        displayName: docker build azureml base
+        pool:
+          vmImage: $(vmImageName)
+        variables:
+          tagOfThisBuild: $[ dependencies.DefineDockerTags.outputs['DockerTagVars.tagOfThisBuild'] ]
+          tagPRLatest: $[ dependencies.DefineDockerTags.outputs['DockerTagVars.tagPRLatest'] ]
+          repoName: $[ dependencies.DefineDockerTags.outputs['DockerTagVars.repoName'] ]
+        steps:
+          - bash: |
+              echo "repoName: $(repoName)"
+              echo "tagOfThisBuild: $(tagOfThisBuild)-ffcv"
+              echo "tagPRLatest: $(tagPRLatest)-ffcv"
+            displayName: (debug) print pipeline vars
+          - task: Docker@2
+            displayName: Build and Push Image
+            inputs:
+              command: buildAndPush
+              repository: $(repoName)
+              dockerfile: $(dockerfilecondaPathFfcv)
+              containerRegistry: $(dockerRegistryServiceConnection)
+              ${{ if eq(variables['Build.SourceBranchName'], 'merge') }}:
+                tags: |
+                  $(tagOfThisBuild)-conda-ffcv
+                  $(tagPRLatest)-conda-ffcv
+              ${{ if eq(variables['Build.SourceBranchName'], 'main') }}:
+                tags: |
+                  $(tagOfThisBuild)-conda-ffcv
+                  $(tagLatest)-conda-ffcv

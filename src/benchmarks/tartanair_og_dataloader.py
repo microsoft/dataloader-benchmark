@@ -1,6 +1,7 @@
 from timeit import default_timer as timer
 
 import mlflow
+
 from src.data.tartanair import build_loader
 from src.data.tartanair.build import TartanAirNoTransform, TartanAirVideoDataset
 from src.utils.opts import parse_args

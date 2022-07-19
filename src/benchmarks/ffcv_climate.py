@@ -10,7 +10,7 @@ from ffcv.transforms import ToTensor
 
 def parse_args():
     parser = argparse.ArgumentParser(description="FFCV options")
-    parser.add_argument("--datapath", type=str, help="Dataset to use for benchmarking")
+    parser.add_argument("--beton_file", type=str, help="Dataset to use for benchmarking")
     parser.add_argument("--order", type=str, default="random", help="Ordering of data: random or quasi_random")
     parser.add_argument("--os_cache", type=lambda x: bool(distutils.util.strtobool(x)))
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size")

@@ -8,9 +8,11 @@ target:
 environment:
   registry: commondockerimages.azurecr.io
   username: commondockerimages
-  image: dataloader-benchmark:latest
+  # image: dataloader-benchmark:latest
+  image: dataloader-benchmark:latest-ffcv
   # image: dataloader-benchmark:PR-3-latest-conda
   setup:
+    - pip install mlflow azureml-mlflow azureml-core
     - pip install -e .
 
 # $CONFIG_DIR is expanded to the directory of this config file.
@@ -19,8 +21,8 @@ code:
 
 storage:
   data:
-    storage_account_name: weatherdatastorage2
-    container_name: datasets
+    storage_account_name: commondatasets2
+    container_name: commondatasets
     mount_dir: /mnt/data
     mount_options: ["--file-cache-timeout-in-seconds=0"]
   custom_output:
@@ -32,15 +34,17 @@ storage:
 search:
   job_template:
     # name: job_{experiment_name:s}_{auto:10s}
-    name: climate_ffcv_{auto:10s}
+    name: tartanair_ffcv_{auto:10s}
     sku: G1
     command:
-      - python src/benchmarks/ffcv_climate.py
-        --beton_file /mnt/data/trial/1.40625/{use}/val.beton
+      - python src/benchmarks/azure_monitor.py &
+      - python src/benchmarks/compare_pytorch_ffcv.py
+        --dataset tartanair
+        --beton_file /mnt/data/tartanair-release1/tartan_abandonedfactory_ratnesh.beton
+        --tartanair_ann_file /mnt/data/tartanair-release1/train_ann_debug_ratnesh.json
         --batch_size {batch_size}
         --num_workers {num_workers}
         --order {order}
-        --use {use}
         --os_cache {os_cache}
     submit_args:
       container_args:
@@ -54,15 +58,10 @@ search:
       values: choice(6)
 
     - name: batch_size
-      values: choice(1, 2, 4, 8, 16, 32, 64)
+      values: choice(64)
 
     - name: order
-      spec: discrete
-      values: ["random", "quasi_random"]
-
-    - name: use
-      spec: discrete
-      values: ["pretrain", "forecast"]
+      values: choice("random", "quasi_random")
 
     - name: os_cache
       values: choice("yes", "no")

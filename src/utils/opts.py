@@ -77,7 +77,7 @@ def parse_args():
     parser.add_argument("--img_crop", default=448, type=int)
     parser.add_argument("--seq_len", default=1, type=int, help="number of frames in each video block")
     parser.add_argument("--num_seq", default=16, type=int, help="number of video blocks")
-    parser.add_argument("-j", "--workers", default=0, type=int)
+    parser.add_argument("--num_workers", default=1, type=int, help="number of cpu cores")
 
     args = parser.parse_args()
     return args

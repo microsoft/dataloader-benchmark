@@ -30,7 +30,7 @@
                 "flow_flow",
                 "--batch_size",
                 "32",
-                "--workers",
+                "--num_workers",
                 "0",
                 "--num_seq",
                 "1",

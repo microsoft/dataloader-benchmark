@@ -39,7 +39,7 @@ search:
         --train_ann_file /mnt/data/tartanair-release1/train_ann_debug_ratnesh.json
         --benchmark_results_file /mnt/data_output/benchmark_modalities_results_new.csv
         --batch_size {batch_size}
-        --workers {num_workers}
+        --num_workers {num_workers}
         --num_seq {num_seq}
         --seq_len {seq_len}
         --modalities {modalities}
