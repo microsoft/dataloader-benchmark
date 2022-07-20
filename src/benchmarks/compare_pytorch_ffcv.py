@@ -32,10 +32,7 @@ def parse_args():
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size")
     parser.add_argument("--num_workers", type=int, default=12, help="Number of workers")
 
-    from pprint import pprint
-
     args = parser.parse_args()
-    pprint(args)
 
     return args
 
@@ -126,7 +123,6 @@ def benchmark_tartanair_pytorch(args):
         modalities=["image_left", "depth_left", "flow_flow"],
         transform=TartanAirNoTransform(),
         video_name_keyword=None,
-        ffcv=True,
     )
 
     dataloader = torch.utils.data.DataLoader(

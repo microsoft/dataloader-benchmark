@@ -128,7 +128,7 @@ def benchmark(args):
     mlflow.log_metric(key="batch_size", value=args.batch_size, step=0)
     mlflow.log_metric(key="time_per_batch_without_first", value=time_per_batch_without_first, step=0)
     mlflow.log_metric(key="time_per_batch", value=time_per_batch, step=0)
-    mlflow.log_metric(key="time_per_batch", value=time_per_batch, step=0)
+    mlflow.log_metric(key="time_first_batch", value=time_first_batch, step=0)
     mlflow.log_metric(key="time_copy_per_batch", value=time_copy_per_batch, step=0)
 
 

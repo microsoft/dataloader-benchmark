@@ -1,5 +1,8 @@
 mlruns/
 
+# dali
+debug_viz/
+
 # benchmarks and profiling
 *.csv
 *.py.profile

@@ -2,15 +2,12 @@ description: dataloader-benchmark
 
 target:
   service: aml
-  # name: F32s-v2-ded
   name: V100-1x-ded
 
 environment:
   registry: commondockerimages.azurecr.io
   username: commondockerimages
-  # image: dataloader-benchmark:latest
   image: dataloader-benchmark:latest-ffcv
-  # image: dataloader-benchmark:PR-3-latest-conda
   setup:
     - pip install mlflow azureml-mlflow azureml-core
     - pip install -e .

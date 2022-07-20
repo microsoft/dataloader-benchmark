@@ -101,7 +101,7 @@ class TartanAirVideoDataset(data.Dataset):
         modalities=["image_left", "flow_flow"],
         transform=None,
         video_name_keyword=None,
-        ffcv=False,
+        is_write_to_ffcv_beton=False,
         return_mask_position=False,
     ):
         # Load annotation file.
@@ -136,7 +136,9 @@ class TartanAirVideoDataset(data.Dataset):
         self.transform = transform
         self.num_seq = clip_len
         self.return_mask_position = return_mask_position
-        self.ffcv = ffcv
+
+        # only set this to true when generating beton file for ffcv
+        self.is_write_to_ffcv_beton = is_write_to_ffcv_beton
 
         # added for mae pretrain
         if self.return_mask_position:
@@ -173,11 +175,11 @@ class TartanAirVideoDataset(data.Dataset):
 
                 item[modality] = data
 
-        if self.ffcv:
+        if self.is_write_to_ffcv_beton:
             for key in item:
                 item[key] = np.asarray(item[key])
 
-            # todo ffcv + mask  is currently not tested
+            # todo is_write_to_ffcv_beton + mask  is currently not tested
             if self.return_mask_position:
                 mask = self.masked_position_generator()
                 return (*item.values(), mask)
