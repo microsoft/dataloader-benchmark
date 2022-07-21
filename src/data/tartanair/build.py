@@ -48,7 +48,7 @@ def build_loader(args):
     data_loader_train = torch.utils.data.DataLoader(
         dataset_train,
         batch_size=args.batch_size,
-        num_workers=args.workers,
+        num_workers=args.num_workers,
         pin_memory=args.pin_memory,
         drop_last=True,
         shuffle=False,
@@ -64,7 +64,7 @@ def build_loader(args):
         data_loader_val = torch.utils.data.DataLoader(
             dataset_val,
             batch_size=args.batch_size,
-            num_workers=args.workers,
+            num_workers=args.num_workers,
             pin_memory=args.pin_memory,
             shuffle=False,
             drop_last=False,
@@ -74,7 +74,7 @@ def build_loader(args):
         data_loader_val = torch.utils.data.DataLoader(
             dataset_val,
             batch_size=args.batch_size,
-            num_workers=args.workers,
+            num_workers=args.num_workers,
             pin_memory=args.pin_memory,
             shuffle=False,
             drop_last=False,
@@ -257,21 +257,21 @@ class TartanAirVideoTransform:
 
     def __call__(self, item):
         transformed_item = {}
-        for data_type in item:
+        for modality in item:
             # TODO: We need to support multiple data types in sub-transforms (e.g. CenterCrop / Resize) for code refactoring.
-            if data_type == "image_left":
+            if modality == "image_left":
                 transform = self.image_transform
-            elif data_type == "flow_flow":
+            elif modality == "flow_flow":
                 transform = self.flow_transform
-            elif data_type == "depth_left":
+            elif modality == "depth_left":
                 transform = self.depth_transform
-            elif data_type == "seg_left":
+            elif modality == "seg_left":
                 transform = self.depth_transform
             else:
                 raise NotImplementedError()
 
-            stacked_data = torch.stack([transform(x) for x in item[data_type]], dim=1)
-            transformed_item[data_type] = stacked_data
+            stacked_data = torch.stack([transform(x) for x in item[modality]], dim=1)
+            transformed_item[modality] = stacked_data
 
         return transformed_item
 
@@ -290,21 +290,21 @@ class TartanAirNoTransform:
 
     def __call__(self, item):
         transformed_item = {}
-        for data_type in item:
+        for modality in item:
             # TODO: We need to support multiple data types in sub-transforms (e.g. CenterCrop / Resize) for code refactoring.
-            if data_type == "image_left":
+            if modality == "image_left":
                 transform = self.image_transform
-            elif data_type == "flow_flow":
+            elif modality == "flow_flow":
                 transform = self.flow_transform
-            elif data_type == "depth_left":
+            elif modality == "depth_left":
                 transform = self.depth_transform
-            elif data_type == "seg_left":
+            elif modality == "seg_left":
                 transform = self.depth_transform
             else:
                 raise NotImplementedError()
 
-            stacked_data = torch.stack([transform(x) for x in item[data_type]], dim=1)
-            transformed_item[data_type] = stacked_data
+            stacked_data = torch.stack([transform(x) for x in item[modality]], dim=1)
+            transformed_item[modality] = stacked_data
 
         return transformed_item
 

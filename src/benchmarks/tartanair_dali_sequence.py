@@ -10,14 +10,14 @@ from nvidia.dali.plugin.pytorch import DALIGenericIterator
 
 
 @pipeline_def
-def get_frame_seq_pipe(seq_path, sequence_length, img_crop, img_dim, device_ops="cpu"):
-    video = fn.readers.sequence(file_root=seq_path, sequence_length=sequence_length, name="Reader")
+def get_frame_seq_pipe(seq_path, sequence_length, img_crop, img_dim, device="cpu", device_ops="cpu"):
+    video = fn.readers.sequence(file_root=seq_path, sequence_length=sequence_length, device=device, name="Reader")
     # tartanair like crop
     pos_x = fn.random.uniform(range=(0.0, 1.0))
     pos_y = fn.random.uniform(range=(0.0, 1.0))
 
     images_crop = fn.crop(video, crop=(img_crop, img_crop), crop_pos_x=pos_x, crop_pos_y=pos_y, device=device_ops)
-    images_resized = fn.resize(images_crop, size=[img_dim, img_dim])
+    images_resized = fn.resize(images_crop, size=[img_dim, img_dim], device=device_ops)
 
     return images_resized
 
@@ -51,6 +51,8 @@ def visualize_seq_pipe(args):
         batch_size=args.batch_size,
         num_threads=args.num_threads,
         device_id=args.device_id,
+        device=args.device,
+        device_ops=args.device_ops,
         seed=args.seed,
         img_crop=args.img_crop,
         img_dim=args.img_dim,
@@ -81,6 +83,8 @@ def benchmark_pipeline(args):
         batch_size=args.batch_size,
         device_id=args.device_id,
         num_threads=args.num_threads,
+        device=args.device,
+        device_ops=args.device_ops,
         seed=args.seed,
         img_crop=args.img_crop,
         img_dim=args.img_dim,
@@ -112,9 +116,9 @@ def benchmark_pipeline(args):
     print(f"{time_per_batch:.3f} secs per batch")
     print(f"{time_per_batch_without_first:.3f} secs per batch without counting first batch")
 
-    mlflow.log_metric(key="dali/time_per_batch_without_first", value=time_per_batch_without_first, step=0)
-    mlflow.log_metric(key="dali/time_per_batch", value=time_per_batch, step=0)
-    mlflow.log_metric(key="dali/time_first_batch", value=time_first_batch, step=0)
+    mlflow.log_metric(key="time_per_batch_without_first", value=time_per_batch_without_first, step=0)
+    mlflow.log_metric(key="time_per_batch", value=time_per_batch, step=0)
+    mlflow.log_metric(key="time_first_batch", value=time_first_batch, step=0)
 
 
 def get_parsed_args():

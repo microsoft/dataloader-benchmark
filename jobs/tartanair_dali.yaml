@@ -29,30 +29,68 @@ storage:
     is_output: True
 
 jobs:
-  - name: bench_tartanair_dali
+  - name: tartanair_dali_modalities_image_left_seq_len_1
     sku: G1
     command:
       - python src/benchmarks/azure_monitor.py &
       - python src/benchmarks/tartanair_dali.py
         --batch_size 64
-        --image_dir /mnt/data/tartanair-release1-dali/
+        --image_dir /mnt/data/tartanair-release1-dali/abandonedfactory/Easy/P000/
         --is_amlt yes
-        # --image_dir /mnt/data/tartanair-release1/abandonedfactory/Easy/P000/
     submit_args:
       container_args:
         shm_size: 640g
       env: { AZUREML_COMPUTE_USE_COMMON_RUNTIME: True }
 
-  - name: bench_tartanair_dali_sequence
+  - name: tartanair_dali_modalities_image_left_seq_len_16
     sku: G1
     command:
       - python src/benchmarks/azure_monitor.py &
       - python src/benchmarks/tartanair_dali_sequence.py
         --batch_size 64
         --sequence_length 16
-        --seq_dir /mnt/data/tartanair-release1-dali/
+        --seq_dir /mnt/data/tartanair-release1-dali/abandonedfactory/Easy/P000/sequence_dali
         --is_amlt yes
     submit_args:
       container_args:
         shm_size: 640g
       env: { AZUREML_COMPUTE_USE_COMMON_RUNTIME: True }
+
+  - name: tartanair_dali_modalities_depth_left_seq_len_1
+    sku: G1
+    command:
+      - python src/benchmarks/azure_monitor.py &
+      - python src/benchmarks/tartanair_dali_npy.py
+        --batch_size 64
+        --is_amlt yes
+        --image_dir /mnt/data/tartanair-release1/abandonedfactory/Easy/P000/depth_left/
+    submit_args:
+      container_args:
+        shm_size: 640g
+      env: { AZUREML_COMPUTE_USE_COMMON_RUNTIME: True }
+
+  # - name: tartanair_dali_modalities_rgb_separate_dir
+  #   sku: G1
+  #   command:
+  #     - python src/benchmarks/azure_monitor.py &
+  #     - python src/benchmarks/tartanair_dali.py
+  #       --batch_size 64
+  #       --image_dir /mnt/data/tartanair-release1-dali/abandonedfactory/Easy/P000/
+  #       --is_amlt yes
+  #   submit_args:
+  #     container_args:
+  #       shm_size: 640g
+  #     env: { AZUREML_COMPUTE_USE_COMMON_RUNTIME: True }
+
+  # - name: tartanair_dali_modalities_npy_depth_separate_dir
+  #   sku: G1
+  #   command:
+  #     - python src/benchmarks/azure_monitor.py &
+  #     - python src/benchmarks/tartanair_dali_npy.py
+  #       --batch_size 64
+  #       --is_amlt yes
+  #       --image_dir /mnt/data/tartanair-release1-dali/abandonedfactory/Easy/P000/depth_left/
+  #   submit_args:
+  #     container_args:
+  #       shm_size: 640g
+  #     env: { AZUREML_COMPUTE_USE_COMMON_RUNTIME: True }

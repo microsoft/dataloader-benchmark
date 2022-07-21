@@ -147,9 +147,9 @@ def benchmark_pipeline(args):
     print(f"{time_per_batch:.3f} secs per batch")
     print(f"{time_per_batch_without_first:.3f} secs per batch without counting first batch")
 
-    mlflow.log_metric(key="dali/time_per_batch_without_first", value=time_per_batch_without_first, step=0)
-    mlflow.log_metric(key="dali/time_per_batch", value=time_per_batch, step=0)
-    mlflow.log_metric(key="dali/time_first_batch", value=time_first_batch, step=0)
+    mlflow.log_metric(key="time_per_batch_without_first", value=time_per_batch_without_first, step=0)
+    mlflow.log_metric(key="time_per_batch", value=time_per_batch, step=0)
+    mlflow.log_metric(key="time_first_batch", value=time_first_batch, step=0)
 
 
 def get_parsed_args():

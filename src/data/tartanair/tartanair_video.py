@@ -173,11 +173,11 @@ class TartanAirVideoDataset(data.Dataset):
                 else:
                     raise ValueError()
 
-                item[modality] = data
+                item[modality].append(data)
 
         if self.is_write_to_ffcv_beton:
-            for key in item:
-                item[key] = np.asarray(item[key])
+            for modality in item:
+                item[modality] = np.asarray(item[modality])
 
             # todo is_write_to_ffcv_beton + mask  is currently not tested
             if self.return_mask_position:

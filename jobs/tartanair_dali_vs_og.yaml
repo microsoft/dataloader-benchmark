@@ -7,9 +7,8 @@ target:
 environment:
   registry: commondockerimages.azurecr.io
   username: commondockerimages
-  image: dataloader-benchmark:latest-ffcv
+  image: dataloader-benchmark:latest
   setup:
-    - pip install mlflow azureml-mlflow azureml-core
     - pip install -e .
 
 # $CONFIG_DIR is expanded to the directory of this config file.
@@ -31,18 +30,18 @@ storage:
 search:
   job_template:
     # name: job_{experiment_name:s}_{auto:10s}
-    name: tartanair_ffcv_{auto:10s}
+    name: tartanair_og_{auto:10s}
     sku: G1
     command:
-      - python src/benchmarks/azure_monitor.py &
-      - python src/benchmarks/compare_pytorch_ffcv.py
-        --dataset tartanair
-        --beton_file /mnt/data/tartanair-release1/tartan_abandonedfactory_ratnesh.beton
-        --tartanair_ann_file /mnt/data/tartanair-release1/train_ann_debug_ratnesh.json
-        --batch_size {batch_size}
-        --num_workers {num_workers}
-        --order {order}
-        --os_cache {os_cache}
+      - python src/benchmarks/tartanair_og_dataloader.py
+        --train_ann_file /mnt/data/tartanair-release1/train_ann_debug_ratnesh.json
+        --benchmark_results_file /mnt/data_output/benchmark_modalities_results_new.csv
+        --batch_size 64
+        --num_workers 6
+        --num_seq 1
+        --modalities {modalities}
+        --seq_len {seq_len}
+        --train_transform TartanAirVideoTransform
     submit_args:
       container_args:
         shm_size: 640g
@@ -51,14 +50,8 @@ search:
   type: grid
   max_trials: 1000
   params:
-    - name: num_workers
-      values: choice(6)
+    - name: modalities
+      values: choice("image_left", "depth_left")
 
-    - name: batch_size
-      values: choice(64)
-
-    - name: order
-      values: choice("random", "quasi_random")
-
-    - name: os_cache
-      values: choice("yes", "no")
+    - name: seq_len
+      values: choice(1, 16)
