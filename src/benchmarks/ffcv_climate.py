@@ -35,7 +35,7 @@ def get_order_option_ffcv(order):
 
 def benchmark_climate_ffcv(args):
     print("===== Benchmarking =====")
-    print(f"Dataset: ffcv\n \t {args.datapath}")
+    print(f"Dataset: ffcv\n \t {args.beton_file}")
     print(f"Order: {args.order}")
     print(f"OS cache: {args.os_cache}")
     if args.use == "forecast":
@@ -48,7 +48,7 @@ def benchmark_climate_ffcv(args):
             "trajs": [NDArrayDecoder(), ToTensor()],
         }
     loader = Loader(
-        args.datapath,
+        args.beton_file,
         batch_size=args.batch_size,
         num_workers=args.num_workers,
         order=get_order_option_ffcv(args.order),
@@ -63,8 +63,10 @@ def benchmark_climate_ffcv(args):
         start_copy = timer()
         if args.use == "forecast":
             x, y = batch[0].cuda(), batch[1].cuda()
+            #print(x.shape, y.shape)
         elif args.use == "pretrain":
             traj = batch[0].cuda()
+            #print(traj.shape)
         time_copy += timer() - start_copy
         num_batches += 1
         if idx == 0:
