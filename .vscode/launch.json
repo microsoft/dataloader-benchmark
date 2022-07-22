@@ -21,7 +21,7 @@
             "justMyCode": true,
             "args": [
                 "--train_ann_file",
-                "/datadrive/commondatasets/tartanair-release1/train_ann_debug_ratnesh.json",
+                "/datadrive/localdatasets/tartanair-release1/train_ann_debug_ratnesh.json",
                 "--benchmark_results_file",
                 "benchmark_results.csv",
                 "--modalities",

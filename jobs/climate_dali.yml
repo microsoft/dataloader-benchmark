@@ -1,0 +1,44 @@
+description: dataloader-benchmark-dali
+
+target:
+  service: aml
+  name: V100-1x-ded
+
+environment:
+  registry: commondockerimages.azurecr.io
+  username: commondockerimages
+  image: dataloader-benchmark:latest
+  setup:
+    - pip install --extra-index-url https://developer.download.nvidia.com/compute/redist --upgrade nvidia-dali-cuda110
+    - pip install -e .
+
+# $CONFIG_DIR is expanded to the directory of this config file.
+code:
+  local_dir: $CONFIG_DIR/../
+
+storage:
+  data:
+    storage_account_name: weatherdatastorage2
+    container_name: datasets
+    mount_dir: /mnt/data
+    mount_options: ["--file-cache-timeout-in-seconds=0"]
+  custom_output:
+    storage_account_name: ramadaanaml
+    container_name: mmvmae-benchmark-results
+    mount_dir: /mnt/data_output
+    is_output: True
+
+jobs:
+  - name: climate_dali_test
+    sku: G1
+    command:
+      - python src/benchmarks/azure_monitor.py &
+      - python src/benchmarks/climate_dali_npy.py
+        --batch_size 32
+        --data_dir /mnt/data/1.40625deg_monthly_np/train
+        --initial_fill 100
+        --is_amlt yes
+    submit_args:
+      container_args:
+        shm_size: 640g
+      env: { AZUREML_COMPUTE_USE_COMMON_RUNTIME: True }
