@@ -1,6 +1,5 @@
 import distutils
 import os
-
 # from data.climate.era5_datapipe import ERA5Npy
 from random import shuffle
 from timeit import default_timer as timer
@@ -8,7 +7,6 @@ from timeit import default_timer as timer
 import mlflow
 import numpy as np
 import nvidia.dali.fn as fn
-
 # from nvidia.dali import pipeline_def
 from nvidia.dali.pipeline.experimental import pipeline_def
 from nvidia.dali.plugin.pytorch import DALIGenericIterator
@@ -16,7 +14,7 @@ from nvidia.dali.plugin.pytorch import DALIGenericIterator
 batch_size = 32
 
 
-class ExternalInputIterator:
+class ExternalPretrainInputIterator:
     def __init__(self, data_dir, variables, batch_size_ext=32):
         self.data_dir = data_dir
         self.batch_size = batch_size_ext
@@ -37,7 +35,7 @@ class ExternalInputIterator:
             # todo cant have dict. perhaps multiple pipelines
             # batch.append({k: data[k] for k in self.variables})
             # test with single variable
-            batch.append(data[self.variables[0]])
+            batch.append(np.concatenate([data[k] for k in self.variables], axis=1))
             self.i = (self.i + 1) % self.n
         return batch
 
@@ -45,7 +43,7 @@ class ExternalInputIterator:
 @pipeline_def
 def get_climate_npy_pipeline(data_dir, variables):
     print("\n\n\nget_climate_npy_pipeline():")
-    data = fn.external_source(source=ExternalInputIterator(data_dir, variables, batch_size_ext=batch_size))
+    data = fn.external_source(source=ExternalPretrainInputIterator(data_dir, variables, batch_size_ext=batch_size))
     return data
 
 
@@ -132,7 +130,7 @@ def get_parsed_args():
     parser.add_argument(
         "--data_dir",
         type=str,
-        default="/datadrive/weatherstorage2datasets/1.40625deg_monthly_np/train",
+        default="/datadrive/weatherstorage2datasets/1.40625deg_monthly_np/val",
     )
     parser.add_argument("--is_amlt", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
     parser.add_argument("--read_ahead", default="yes", type=lambda x: bool(distutils.util.strtobool(x)))
