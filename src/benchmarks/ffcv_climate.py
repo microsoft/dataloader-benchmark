@@ -63,10 +63,8 @@ def benchmark_climate_ffcv(args):
         start_copy = timer()
         if args.use == "forecast":
             x, y = batch[0].cuda(), batch[1].cuda()
-            #print(x.shape, y.shape)
         elif args.use == "pretrain":
             traj = batch[0].cuda()
-            #print(traj.shape)
         time_copy += timer() - start_copy
         num_batches += 1
         if idx == 0:
