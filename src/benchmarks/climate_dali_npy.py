@@ -1,5 +1,6 @@
 import distutils
 import os
+
 # from data.climate.era5_datapipe import ERA5Npy
 from random import shuffle
 from timeit import default_timer as timer
@@ -7,6 +8,7 @@ from timeit import default_timer as timer
 import mlflow
 import numpy as np
 import nvidia.dali.fn as fn
+
 # from nvidia.dali import pipeline_def
 from nvidia.dali.pipeline.experimental import pipeline_def
 from nvidia.dali.plugin.pytorch import DALIGenericIterator
@@ -41,15 +43,30 @@ class ExternalPretrainInputIterator:
 
 
 @pipeline_def
-def get_climate_npy_pipeline(data_dir, variables):
-    print("\n\n\nget_climate_npy_pipeline():")
+def get_climate_npz_ext_pretrain_pipeline(data_dir, variables):
+    print("\n\n\nget_climate_npz_ext_pretrain_pipeline():")
     data = fn.external_source(source=ExternalPretrainInputIterator(data_dir, variables, batch_size_ext=batch_size))
     return data
 
 
-def test_pipe_single_batch(args):
-    print("\n\n\ntest_pipe_single_batch():")
-    pipe = get_climate_npy_pipeline(
+@pipeline_def
+def get_climate_npy_pretrain_pipeline(data_dir, device):
+    print("\n\n\nget_climate_npy_pretrain_pipeline():")
+    data = fn.readers.numpy(
+        device=device,
+        file_root=data_dir,
+        file_filter="*.npy",
+        # random_shuffle=random_shuffle,
+        # initial_fill=initial_fill,
+        # read_ahead=read_ahead,
+        name="Reader",
+    )
+    return data
+
+
+def test_pipe_npz_ext_pretrain_single_batch(args):
+    print("\n\n\ntest_pipe_npz_ext_pretrain_single_batch():")
+    pipe = get_climate_npz_ext_pretrain_pipeline(
         data_dir=args.data_dir,
         variables=args.variables,
         batch_size=args.batch_size,
@@ -69,12 +86,35 @@ def test_pipe_single_batch(args):
         # print(f"sample {sample_idx:05}, variable {args.}, shape: {sample[k].shape}")
 
 
-def benchmark_pipeline(args):
-    print("\n\n\nbenchmark_pipeline():")
+def test_pipe_npy_single_batch(args):
+    print("\n\n\nget_climate_npy_pretrain_pipeline():")
+    pipe = get_climate_npy_pretrain_pipeline(
+        data_dir=args.data_dir,
+        batch_size=args.batch_size,
+        num_threads=args.num_threads,
+        device=args.device,
+        device_id=args.device_id,
+        # random_shuffle=args.random_shuffle,
+        # initial_fill=args.initial_fill,
+        # read_ahead=args.read_ahead,
+        # seed=args.seed,
+    )
+    pipe.build()
+    pipe_out = pipe.run()
+    batch = [np.array(pipe_out[0][sample_idx]) for sample_idx in range(args.batch_size)]
+    for sample_idx, sample in enumerate(batch):
+        print(
+            f"sample {sample_idx:05}, shape: {sample.shape}"
+            # f"sample {sample_idx:05}, shape: {sample.shape}, sample.min(): {sample.min()}, sample.max(): {sample.max()}, sample.mean(): {sample.mean()}"
+        )
+
+
+def benchmark_npz_ext_pretrain_pipeline(args):
+    print("\n\n\nbenchmark_npz_ext_pretrain_pipeline():")
     start = timer()
     last = start
 
-    pipe = get_climate_npy_pipeline(
+    pipe = get_climate_npz_ext_pretrain_pipeline(
         data_dir=args.data_dir,
         variables=args.variables,
         batch_size=args.batch_size,
@@ -116,7 +156,7 @@ def get_parsed_args():
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--batch_size", type=int, default=1)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--num_threads", type=int, default=os.cpu_count())
     parser.add_argument(
@@ -130,7 +170,8 @@ def get_parsed_args():
     parser.add_argument(
         "--data_dir",
         type=str,
-        default="/datadrive/weatherstorage2datasets/1.40625deg_monthly_np/val",
+        # default="/datadrive/weatherstorage2datasets/1.40625deg_monthly_np/val",
+        default="/datadrive/localdatasets/climate/1.40625deg_monthly_npy/val/pretrain/",
     )
     parser.add_argument("--is_amlt", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
     parser.add_argument("--read_ahead", default="yes", type=lambda x: bool(distutils.util.strtobool(x)))
@@ -155,9 +196,10 @@ def get_parsed_args():
 
 def main():
     args = get_parsed_args()
-    test_pipe_single_batch(args)
-    benchmark_pipeline(args)
+    # test_pipe_npz_ext_pretrain_single_batch(args)
+    # benchmark_npz_ext_pretrain_pipeline(args)
 
+    test_pipe_npy_single_batch(args)
     print("\n\n\n")
 
 

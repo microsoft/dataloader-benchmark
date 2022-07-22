@@ -24,7 +24,7 @@ storage:
   custom_output:
     storage_account_name: ramadaanaml
     container_name: mmvmae-benchmark-results
-    mount_dir: /mnt/data_output
+    # mount_dir: /mnt/custom_output
     is_output: True
 
 search:
