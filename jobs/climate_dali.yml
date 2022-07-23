@@ -42,3 +42,21 @@ jobs:
       container_args:
         shm_size: 640g
       env: { AZUREML_COMPUTE_USE_COMMON_RUNTIME: True }
+
+  - name: climate_dali_parallel_ext_callable_pipeline
+    sku: G1
+    command:
+      - python src/benchmarks/azure_monitor.py &
+      - python src/benchmarks/climate_dali_npy.py
+        --batch_size 32
+        --data_dir /mnt/data/1.40625deg_monthly_np/val
+        --num_threads 2
+        --py_num_workers 6
+        --initial_fill 100
+        --is_amlt yes
+        --debug_print yes
+        --debug_print_each_sample no
+    submit_args:
+      container_args:
+        shm_size: 640g
+      env: { AZUREML_COMPUTE_USE_COMMON_RUNTIME: True }
