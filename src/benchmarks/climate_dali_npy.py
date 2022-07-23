@@ -59,6 +59,7 @@ class ExternalPretrainInputCallable:
         self.debug_print_each_sample = debug_print_each_sample
         # self.buffer_size = buffer_size
         # self.buffer: List[np.ndarray] = []
+        # todo buffer.append(next(generator))
         self.buffer = None
 
         self.load_next_file_into_buffer()
@@ -66,8 +67,6 @@ class ExternalPretrainInputCallable:
     # currently just loads one monthly file at a time
     def load_next_file_into_buffer(self):
         self.fname = self.files[self.file_idx]
-        print("\n\n\nload_next_file_into_buffer():")
-        print(self.fname)
         if self.debug_print:
             print("\n\n\nload_next_file_into_buffer():")
             print(self.fname)
@@ -75,7 +74,8 @@ class ExternalPretrainInputCallable:
         data = np.load(os.path.join(self.data_dir, self.fname))  # how to use fn.readers.numpy here
         self.buffer = np.concatenate([data[k] for k in self.variables], axis=1)
         # self.buffer.append(np.concatenate([data[k] for k in self.variables], axis=1))
-        print(f"time taken to load file: {(timer() - start):.3f} seconds")
+        if self.debug_print:
+            print(f"time taken to load file: {(timer() - start):.3f} seconds")
         # todo
         # mmap_curr = np.memmap(os.path.join(self.data_dir, self.fname), dtype='float32', mode='w+', shape=(,17,128,256)) # shape depends on month
         # append mmap to buffer
@@ -99,9 +99,10 @@ class ExternalPretrainInputCallable:
 
         if self.sample_idx_curr_npy_file == self.max_sample_idx_curr_npy_file:
             self.load_next_file_into_buffer()
-            print(
-                f"{self.fname}, self.sample_idx_curr_npy_file: {self.sample_idx_curr_npy_file}, self.max_sample_idx_curr_npy_file: {self.max_sample_idx_curr_npy_file}, self.sample_idx_cum: {self.sample_idx_cum}"
-            )
+            if self.debug_print:
+                print(
+                    f"{self.fname}, self.sample_idx_curr_npy_file: {self.sample_idx_curr_npy_file}, self.max_sample_idx_curr_npy_file: {self.max_sample_idx_curr_npy_file}, self.sample_idx_cum: {self.sample_idx_cum}"
+                )
             return sample
 
         self.sample_idx_curr_npy_file += 1
