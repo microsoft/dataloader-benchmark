@@ -53,28 +53,31 @@ class ExternalPretrainInputCallable:
         # todo bug. num hours per year. parameterize
         # perhaps keep track of num files? leap years, 100/4, exceptions can be problematic
 
+        self.sample_idx_cum = 0
         self.file_idx = 0
-        self.buffer = None
         self.debug_print = debug_print
         self.debug_print_each_sample = debug_print_each_sample
         # self.buffer_size = buffer_size
-        # self.buffer = []
+        # self.buffer: List[np.ndarray] = []
+        self.buffer = None
+
         self.load_next_file_into_buffer()
 
     # currently just loads one monthly file at a time
     def load_next_file_into_buffer(self):
-        fname = self.files[self.file_idx]
+        self.fname = self.files[self.file_idx]
         print("\n\n\nload_next_file_into_buffer():")
-        print(fname)
+        print(self.fname)
         if self.debug_print:
             print("\n\n\nload_next_file_into_buffer():")
-            print(fname)
+            print(self.fname)
         start = timer()
-        data = np.load(os.path.join(self.data_dir, fname))  # how to use fn.readers.numpy here
+        data = np.load(os.path.join(self.data_dir, self.fname))  # how to use fn.readers.numpy here
         self.buffer = np.concatenate([data[k] for k in self.variables], axis=1)
+        # self.buffer.append(np.concatenate([data[k] for k in self.variables], axis=1))
         print(f"time taken to load file: {(timer() - start):.3f} seconds")
         # todo
-        # mmap_curr = np.memmap(os.path.join(self.data_dir, fname), dtype='float32', mode='w+', shape=(,17,128,256)) # shape depends on month
+        # mmap_curr = np.memmap(os.path.join(self.data_dir, self.fname), dtype='float32', mode='w+', shape=(,17,128,256)) # shape depends on month
         # append mmap to buffer
 
         # shuffle buuffle arrary on hour dim
@@ -82,26 +85,30 @@ class ExternalPretrainInputCallable:
         np.random.shuffle(rand_indices_hourly)
         self.buffer = self.buffer[rand_indices_hourly]
 
-        self.file_idx += 1
         self.sample_idx_curr_npy_file = 0
         self.max_sample_idx_curr_npy_file = self.buffer.shape[0] - 1
+        self.file_idx += 1
 
     def __call__(self, sample_info):
         sample_idx = sample_info.idx_in_epoch
-        if sample_info.iteration >= self.num_samples_in_epoch:
+        if (sample_info.iteration >= self.num_samples_in_epoch) or (self.file_idx > (len(self.files) - 1)):
             # Indicate end of the epoch
             raise StopIteration()
 
-        # maintain dimensionality (1, vars=17, 128, 256)
-        sample = self.buffer[[self.sample_idx_curr_npy_file], :]
+        sample = self.buffer[self.sample_idx_curr_npy_file, :]
 
         if self.sample_idx_curr_npy_file == self.max_sample_idx_curr_npy_file:
             self.load_next_file_into_buffer()
+            print(
+                f"{self.fname}, self.sample_idx_curr_npy_file: {self.sample_idx_curr_npy_file}, self.max_sample_idx_curr_npy_file: {self.max_sample_idx_curr_npy_file}, self.sample_idx_cum: {self.sample_idx_cum}"
+            )
+            return sample
 
         self.sample_idx_curr_npy_file += 1
+        self.sample_idx_cum += 1
         if self.debug_print_each_sample:
             print(
-                f"self.sample_idx_curr_npy_file: {self.sample_idx_curr_npy_file}, self.max_sample_idx_curr_npy_file: {self.max_sample_idx_curr_npy_file}"
+                f"{self.fname}, self.sample_idx_curr_npy_file: {self.sample_idx_curr_npy_file}, self.max_sample_idx_curr_npy_file: {self.max_sample_idx_curr_npy_file}, self.sample_idx_cum: {self.sample_idx_cum}"
             )
         return sample
 
@@ -285,14 +292,16 @@ def benchmark_parallel_callable_pretrain_pipeline(args):
     # dali_iter = DALIGenericIterator(pipe, ["data"], reader_name="Reader")
     dali_iter = DALIGenericIterator(pipe, ["data"])
 
+    num_batches = 0
     for batch_idx, batch_list in enumerate(dali_iter):
-        print(f"batch_idx: {batch_idx:05}")
+        print(f"batch_idx: {batch_idx:05}, sample_idx: {args.batch_size*(num_batches+1):07}")
         if batch_idx == 0:
             first = timer()
-            print(f"batch_list[0]['data'].shape: {batch_list[0]['data'].shape}")
-        print(f"batch_list[0]['data'].shape: {batch_list[0]['data'].shape}")
+            print(f"batch shape: {batch_list[0]['data'].shape}")
+        print(f"batch.shape: {batch_list[0]['data'].shape}")
         print(f"{(timer() - last):.3f} secs for this batch")
         last = timer()
+        num_batches += 1
 
     last = timer()
 
@@ -316,8 +325,8 @@ def get_parsed_args():
 
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--num_threads", type=int, default=12)
-    parser.add_argument("--py_num_workers", type=int, default=12)
+    parser.add_argument("--num_threads", type=int, default=6)
+    parser.add_argument("--py_num_workers", type=int, default=1)
     parser.add_argument(
         "--device", type=str, default="cpu", choices=["cpu", "gpu"]
     )  # use gpu for GPUDirect Storage Support. needs cuda>=11.4
@@ -364,10 +373,7 @@ def main():
 
     # test_pipe_npy_single_batch(args)
 
-    # test_callable_pretrain_single_batch(args)
-    # benchmark_callable_pretrain_pipeline(args)
-
-    test_parallel_callable_pretrain_single_batch(args)
+    # test_parallel_callable_pretrain_single_batch(args)
     benchmark_parallel_callable_pretrain_pipeline(args)
 
     print("\n\n\n")
