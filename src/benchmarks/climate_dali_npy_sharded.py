@@ -1,5 +1,6 @@
 import distutils
 import os
+from functools import partial
 
 # from data.climate.era5_datapipe import ERA5Npy
 from random import shuffle
@@ -177,6 +178,44 @@ def test_parallel_callable_pretrain_single_batch_sharded(args):
         # print(f"sample {sample_idx:05}, variable {args.}, shape: {sample[k].shape}")
 
 
+def test_parallel_callable_pretrain_single_batch_sharded_partial(args):
+
+    print("\n\n\ntest_parallel_callable_pretrain_single_batch_sharded_partial():")
+
+    pipe_partial = partial(
+        get_parallel_callable_pretrain_pipeline_sharded,
+        data_dir=args.data_dir,
+        variables=args.variables,
+        batch_size=args.batch_size,
+        num_threads=args.num_threads,
+        device_id=args.device_id,
+        debug_print=args.debug_print,
+        debug_print_each_sample=args.debug_print_each_sample,
+        py_num_workers=args.py_num_workers,
+    )
+
+    pipe_list = []
+
+    for shard_id in range(args.num_shards):
+        pipe_list.append(pipe_partial(shard_id=shard_id, num_shards=args.num_shards))
+
+    for pipe in pipe_list:
+        pipe.build()
+
+    pipe_outputs = []
+    for pipe in pipe_list:
+        pipe_outputs.append(pipe.run())
+
+    for pipe_idx, pipe_out in enumerate(pipe_outputs):
+        batch = [np.array(pipe_out[0][sample_idx]) for sample_idx in range(args.batch_size)]
+
+        for sample_idx, sample in enumerate(batch):
+            print(
+                f"pipe_idx: {pipe_idx:02}, sample {sample_idx:05}, shape: {sample.shape}"
+                # f"sample {sample_idx:05}, shape: {sample.shape}, sample.min(): {sample.min()}, sample.max(): {sample.max()}, sample.mean(): {sample.mean()}"
+            )
+
+
 def get_parsed_args():
     import argparse
 
@@ -228,7 +267,8 @@ def get_parsed_args():
 
 def main():
     args = get_parsed_args()
-    test_parallel_callable_pretrain_single_batch_sharded(args)
+    # test_parallel_callable_pretrain_single_batch_sharded(args)
+    test_parallel_callable_pretrain_single_batch_sharded_partial(args)
     # benchmark_parallel_callable_pretrain_pipeline(args)
 
     print("\n\n\n")
