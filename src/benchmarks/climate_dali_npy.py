@@ -43,7 +43,7 @@ class ExternalPretrainInputIterator:
 
 
 class ExternalPretrainInputCallable:
-    def __init__(self, data_dir, variables, batch_size, buffer_size):
+    def __init__(self, data_dir, variables, batch_size, buffer_size=0):
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.variables = variables
@@ -52,13 +52,16 @@ class ExternalPretrainInputCallable:
         self.num_samples_in_epoch = 8760  # num hours per year. todo parameterize
 
         self.file_idx = 0
+        self.buffer = None
         # self.buffer_size = buffer_size
         # self.buffer = []
+        self.load_next_file_into_buffer()
 
     # currently just loads one monthly file at a time
     def load_next_file_into_buffer(self):
         fname = self.files[self.file_idx]
-        self.buffer = np.load(os.path.join(self.data_dir, fname))  # how to use fn.readers.numpy here
+        data = np.load(os.path.join(self.data_dir, fname))  # how to use fn.readers.numpy here
+        self.buffer = np.concatenate([data[k] for k in self.variables], axis=1)
         # todo
         # mmap_curr = np.memmap(os.path.join(self.data_dir, fname), dtype='float32', mode='w+', shape=(,17,128,256)) # shape depends on month
         # append mmap to buffer
@@ -89,9 +92,21 @@ class ExternalPretrainInputCallable:
 
 
 @pipeline_def
-def get_climate_npz_ext_pretrain_pipeline(data_dir, variables):
-    print("\n\n\nget_climate_npz_ext_pretrain_pipeline():")
+def get_iterable_pretrain_pipeline(data_dir, variables):
+    print("\n\n\nget_iterable_pretrain_pipeline():")
     data = fn.external_source(source=ExternalPretrainInputIterator(data_dir, variables, batch_size_ext=batch_size))
+    return data
+
+
+@pipeline_def
+def get_callable_pretrain_pipeline(data_dir, variables):
+    print("\n\n\nget_callable_pretrain_pipeline():")
+    data = fn.external_source(
+        source=ExternalPretrainInputCallable(data_dir, variables, batch_size=batch_size),
+        batch=False,
+        # num_outputs=1,
+        # dtype=[types.FLOAT],
+    )
     return data
 
 
@@ -113,7 +128,29 @@ def get_climate_npy_pretrain_pipeline(data_dir, device):
 
 def test_pipe_npz_ext_pretrain_single_batch(args):
     print("\n\n\ntest_pipe_npz_ext_pretrain_single_batch():")
-    pipe = get_climate_npz_ext_pretrain_pipeline(
+    pipe = get_iterable_pretrain_pipeline(
+        data_dir=args.data_dir,
+        variables=args.variables,
+        batch_size=args.batch_size,
+        num_threads=args.num_threads,
+        device_id=args.device_id,
+        # random_shuffle=args.random_shuffle,
+        # initial_fill=args.initial_fill,
+        # read_ahead=args.read_ahead,
+        # seed=args.seed,
+    )
+    pipe.build()
+    pipe_out = pipe.run()
+    batch = [np.array(pipe_out[0][sample_idx]) for sample_idx in range(args.batch_size)]
+    for sample_idx, sample in enumerate(batch):
+        print(f"sample {sample_idx:05}, variable {args.variables[0]}, shape: {sample.shape}")
+        # for k in args.variables:
+        # print(f"sample {sample_idx:05}, variable {args.}, shape: {sample[k].shape}")
+
+
+def test_callable_pretrain_single_batch(args):
+    print("\n\n\ntest_callable_pretrain_single_batch():")
+    pipe = get_callable_pretrain_pipeline(
         data_dir=args.data_dir,
         variables=args.variables,
         batch_size=args.batch_size,
@@ -161,7 +198,7 @@ def benchmark_npz_ext_pretrain_pipeline(args):
     start = timer()
     last = start
 
-    pipe = get_climate_npz_ext_pretrain_pipeline(
+    pipe = get_iterable_pretrain_pipeline(
         data_dir=args.data_dir,
         variables=args.variables,
         batch_size=args.batch_size,
@@ -203,9 +240,10 @@ def get_parsed_args():
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--batch_size", type=int, default=1)
+    parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--num_threads", type=int, default=os.cpu_count())
+    # parser.add_argument("--num_threads", type=int, default=os.cpu_count())
+    parser.add_argument("--num_threads", type=int, default=2)
     parser.add_argument(
         "--device", type=str, default="cpu", choices=["cpu", "gpu"]
     )  # use gpu for GPUDirect Storage Support. needs cuda>=11.4
@@ -218,7 +256,8 @@ def get_parsed_args():
         "--data_dir",
         type=str,
         # default="/datadrive/weatherstorage2datasets/1.40625deg_monthly_np/val",
-        default="/datadrive/localdatasets/climate/1.40625deg_monthly_npy/val/pretrain/",
+        # default="/datadrive/localdatasets/climate/1.40625deg_monthly_npy/val/pretrain/",
+        default="/datadrive/localdatasets/climate/1.40625deg_monthly_np/train",
     )
     parser.add_argument("--is_amlt", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
     parser.add_argument("--read_ahead", default="yes", type=lambda x: bool(distutils.util.strtobool(x)))
@@ -246,7 +285,8 @@ def main():
     # test_pipe_npz_ext_pretrain_single_batch(args)
     # benchmark_npz_ext_pretrain_pipeline(args)
 
-    test_pipe_npy_single_batch(args)
+    # test_pipe_npy_single_batch(args)
+    test_callable_pretrain_single_batch(args)
     print("\n\n\n")
 
 
