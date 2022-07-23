@@ -117,6 +117,20 @@ def get_callable_pretrain_pipeline(data_dir, variables, debug_print):
     return data
 
 
+@pipeline_def(batch_size=batch_size, num_threads=2, device_id=0, py_num_workers=6, py_start_method="spawn")
+def get_parallel_callable_pretrain_pipeline(data_dir, variables, debug_print):
+    print("\n\n\\get_parallel_callable_pretrain_pipeline():")
+    data = fn.external_source(
+        source=ExternalPretrainInputCallable(data_dir, variables, debug_print=debug_print, batch_size=batch_size),
+        batch=False,
+        parallel=True
+        # num_outputs=1,
+        # dtype=[types.FLOAT],
+        # reader_name="Reader",
+    )
+    return data
+
+
 @pipeline_def
 def get_climate_npy_pretrain_pipeline(data_dir, device):
     print("\n\n\nget_climate_npy_pretrain_pipeline():")
@@ -158,6 +172,29 @@ def test_iterable_pretrain_single_batch(args):
 def test_callable_pretrain_single_batch(args):
     print("\n\n\ntest_callable_pretrain_single_batch():")
     pipe = get_callable_pretrain_pipeline(
+        data_dir=args.data_dir,
+        variables=args.variables,
+        batch_size=args.batch_size,
+        num_threads=args.num_threads,
+        device_id=args.device_id,
+        debug_print=args.debug_print
+        # random_shuffle=args.random_shuffle,
+        # initial_fill=args.initial_fill,
+        # read_ahead=args.read_ahead,
+        # seed=args.seed,
+    )
+    pipe.build()
+    pipe_out = pipe.run()
+    batch = [np.array(pipe_out[0][sample_idx]) for sample_idx in range(args.batch_size)]
+    for sample_idx, sample in enumerate(batch):
+        print(f"sample {sample_idx:05}, variable {args.variables[0]}, shape: {sample.shape}")
+        # for k in args.variables:
+        # print(f"sample {sample_idx:05}, variable {args.}, shape: {sample[k].shape}")
+
+
+def test_parallel_callable_pretrain_single_batch(args):
+    print("\n\n\ntest_parallel_callable_pretrain_single_batch():")
+    pipe = get_parallel_callable_pretrain_pipeline(
         data_dir=args.data_dir,
         variables=args.variables,
         batch_size=args.batch_size,
@@ -289,6 +326,51 @@ def benchmark_callable_pretrain_pipeline(args):
     mlflow.log_metric(key="time_first_batch", value=time_first_batch, step=0)
 
 
+def benchmark_parallel_callable_pretrain_pipeline(args):
+    print("\n\n\nbenchmark_parallel_callable_pretrain_pipeline():")
+    start = timer()
+    last = start
+
+    pipe = get_callable_pretrain_pipeline(
+        data_dir=args.data_dir,
+        variables=args.variables,
+        batch_size=args.batch_size,
+        num_threads=args.num_threads,
+        device_id=args.device_id,
+        debug_print=args.debug_print,
+        # random_shuffle=args.random_shuffle,
+        # initial_fill=args.initial_fill,
+        # read_ahead=args.read_ahead,
+        # seed=args.seed,
+    )
+
+    # dali_iter = DALIGenericIterator(pipe, ["data"], reader_name="Reader")
+    dali_iter = DALIGenericIterator(pipe, ["data"])
+
+    for batch_idx, batch_list in enumerate(dali_iter):
+        print(f"batch_idx: {batch_idx:05}")
+        if batch_idx == 0:
+            first = timer()
+            print(f"batch_list[0]['data'].shape: {batch_list[0]['data'].shape}")
+        print(f"batch_list[0]['data'].shape: {batch_list[0]['data'].shape}")
+        print(f"{(timer() - last):.3f} secs for this batch")
+        last = timer()
+
+    last = timer()
+
+    time_first_batch = first - start
+    time_per_batch = (last - start) / (batch_idx + 1)
+    time_per_batch_without_first = (last - first) / (batch_idx + 1)
+
+    print(f"{time_first_batch:.3f} secs for the first batch")
+    print(f"{time_per_batch:.3f} secs per batch")
+    print(f"{time_per_batch_without_first:.3f} secs per batch without counting first batch")
+
+    mlflow.log_metric(key="time_per_batch_without_first", value=time_per_batch_without_first, step=0)
+    mlflow.log_metric(key="time_per_batch", value=time_per_batch, step=0)
+    mlflow.log_metric(key="time_first_batch", value=time_first_batch, step=0)
+
+
 def get_parsed_args():
     import argparse
 
@@ -305,6 +387,7 @@ def get_parsed_args():
     parser.add_argument("--random_shuffle", default="yes", type=lambda x: bool(distutils.util.strtobool(x)))
     parser.add_argument("--debug_print", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
     parser.add_argument("--img_crop", type=int, default=448)
+    parser.add_argument("--prefetch_queue_depth", type=int, default=12)
     parser.add_argument("--initial_fill", type=int, default=2)
     parser.add_argument(
         "--data_dir",
@@ -340,8 +423,13 @@ def main():
     # benchmark_iterable_pretrain_pipeline(args)
 
     # test_pipe_npy_single_batch(args)
-    test_callable_pretrain_single_batch(args)
-    benchmark_callable_pretrain_pipeline(args)
+
+    # test_callable_pretrain_single_batch(args)
+    # benchmark_callable_pretrain_pipeline(args)
+
+    test_parallel_callable_pretrain_single_batch(args)
+    benchmark_parallel_callable_pretrain_pipeline(args)
+
     print("\n\n\n")
 
 
