@@ -42,6 +42,52 @@ class ExternalPretrainInputIterator:
         return batch
 
 
+class ExternalPretrainInputCallable:
+    def __init__(self, data_dir, variables, batch_size, buffer_size):
+        self.data_dir = data_dir
+        self.batch_size = batch_size
+        self.variables = variables
+        self.files = os.listdir(data_dir)
+        shuffle(self.files)
+        self.num_samples_in_epoch = 8760  # num hours per year. todo parameterize
+
+        self.file_idx = 0
+        # self.buffer_size = buffer_size
+        # self.buffer = []
+
+    # currently just loads one monthly file at a time
+    def load_next_file_into_buffer(self):
+        fname = self.files[self.file_idx]
+        self.buffer = np.load(os.path.join(self.data_dir, fname))  # how to use fn.readers.numpy here
+        # todo
+        # mmap_curr = np.memmap(os.path.join(self.data_dir, fname), dtype='float32', mode='w+', shape=(,17,128,256)) # shape depends on month
+        # append mmap to buffer
+
+        # shuffle buuffle arrary on hour dim
+        rand_indices_hourly = np.arange(self.buffer.shape[0])
+        np.random.shuffle(rand_indices_hourly)
+        self.buffer = self.buffer[rand_indices_hourly]
+
+        self.file_idx += 1
+        self.sample_idx_curr_npy_file = 0
+        self.max_sample_idx_curr_npy_file = self.buffer.shape[0] - 1
+
+    def __call__(self, sample_info):
+        sample_idx = sample_info.idx_in_epoch
+        if sample_info.iteration >= self.num_samples_in_epoch:
+            # Indicate end of the epoch
+            raise StopIteration()
+
+        # maintain dimensionality (1, vars=17, 128, 256)
+        sample = self.buffer[[self.sample_idx_curr_npy_file], :]
+
+        if self.sample_idx_curr_npy_file == self.max_sample_idx_curr_npy_file:
+            self.load_next_file_into_buffer()
+
+        self.sample_idx_curr_npy_file += 1
+        return sample
+
+
 @pipeline_def
 def get_climate_npz_ext_pretrain_pipeline(data_dir, variables):
     print("\n\n\nget_climate_npz_ext_pretrain_pipeline():")
@@ -61,6 +107,7 @@ def get_climate_npy_pretrain_pipeline(data_dir, device):
         # read_ahead=read_ahead,
         name="Reader",
     )
+
     return data
 
 
