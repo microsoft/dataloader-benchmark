@@ -43,7 +43,7 @@ class ExternalPretrainInputIterator:
 
 
 class ExternalPretrainInputCallable:
-    def __init__(self, data_dir, variables, batch_size, buffer_size=0):
+    def __init__(self, data_dir, variables, batch_size, debug_print):
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.variables = variables
@@ -53,6 +53,7 @@ class ExternalPretrainInputCallable:
 
         self.file_idx = 0
         self.buffer = None
+        self.debug_print = debug_print
         # self.buffer_size = buffer_size
         # self.buffer = []
         self.load_next_file_into_buffer()
@@ -60,6 +61,9 @@ class ExternalPretrainInputCallable:
     # currently just loads one monthly file at a time
     def load_next_file_into_buffer(self):
         fname = self.files[self.file_idx]
+        if self.debug_print:
+            print("\n\n\nload_next_file_into_buffer():")
+            print(fname)
         data = np.load(os.path.join(self.data_dir, fname))  # how to use fn.readers.numpy here
         self.buffer = np.concatenate([data[k] for k in self.variables], axis=1)
         # todo
@@ -88,6 +92,8 @@ class ExternalPretrainInputCallable:
             self.load_next_file_into_buffer()
 
         self.sample_idx_curr_npy_file += 1
+        if self.debug_print:
+            print(f"self.sample_idx_curr_npy_file, {self.sample_idx_curr_npy_file}")
         return sample
 
 
@@ -99,10 +105,10 @@ def get_iterable_pretrain_pipeline(data_dir, variables):
 
 
 @pipeline_def
-def get_callable_pretrain_pipeline(data_dir, variables):
+def get_callable_pretrain_pipeline(data_dir, variables, debug_print):
     print("\n\n\nget_callable_pretrain_pipeline():")
     data = fn.external_source(
-        source=ExternalPretrainInputCallable(data_dir, variables, batch_size=batch_size),
+        source=ExternalPretrainInputCallable(data_dir, variables, debug_print=debug_print, batch_size=batch_size),
         batch=False,
         # num_outputs=1,
         # dtype=[types.FLOAT],
@@ -157,6 +163,7 @@ def test_callable_pretrain_single_batch(args):
         batch_size=args.batch_size,
         num_threads=args.num_threads,
         device_id=args.device_id,
+        debug_print=args.debug_print
         # random_shuffle=args.random_shuffle,
         # initial_fill=args.initial_fill,
         # read_ahead=args.read_ahead,
@@ -205,6 +212,7 @@ def benchmark_iterable_pretrain_pipeline(args):
         batch_size=args.batch_size,
         num_threads=args.num_threads,
         device_id=args.device_id,
+        debug_print=args.debug_print,
         # random_shuffle=args.random_shuffle,
         # initial_fill=args.initial_fill,
         # read_ahead=args.read_ahead,
@@ -247,6 +255,7 @@ def benchmark_callable_pretrain_pipeline(args):
         batch_size=args.batch_size,
         num_threads=args.num_threads,
         device_id=args.device_id,
+        debug_print=args.debug_print,
         # random_shuffle=args.random_shuffle,
         # initial_fill=args.initial_fill,
         # read_ahead=args.read_ahead,
@@ -287,14 +296,14 @@ def get_parsed_args():
 
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--seed", type=int, default=42)
-    # parser.add_argument("--num_threads", type=int, default=os.cpu_count())
-    parser.add_argument("--num_threads", type=int, default=2)
+    parser.add_argument("--num_threads", type=int, default=os.cpu_count())
     parser.add_argument(
         "--device", type=str, default="cpu", choices=["cpu", "gpu"]
     )  # use gpu for GPUDirect Storage Support. needs cuda>=11.4
     parser.add_argument("--device_id", type=int, default=0)
     parser.add_argument("--img_dim", type=int, default=224)
     parser.add_argument("--random_shuffle", default="yes", type=lambda x: bool(distutils.util.strtobool(x)))
+    parser.add_argument("--debug_print", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
     parser.add_argument("--img_crop", type=int, default=448)
     parser.add_argument("--initial_fill", type=int, default=2)
     parser.add_argument(
