@@ -106,6 +106,7 @@ def get_callable_pretrain_pipeline(data_dir, variables):
         batch=False,
         # num_outputs=1,
         # dtype=[types.FLOAT],
+        # reader_name="Reader",
     )
     return data
 
@@ -126,8 +127,8 @@ def get_climate_npy_pretrain_pipeline(data_dir, device):
     return data
 
 
-def test_pipe_npz_ext_pretrain_single_batch(args):
-    print("\n\n\ntest_pipe_npz_ext_pretrain_single_batch():")
+def test_iterable_pretrain_single_batch(args):
+    print("\n\n\ntest_iterable_pretrain_single_batch():")
     pipe = get_iterable_pretrain_pipeline(
         data_dir=args.data_dir,
         variables=args.variables,
@@ -193,8 +194,8 @@ def test_pipe_npy_single_batch(args):
         )
 
 
-def benchmark_npz_ext_pretrain_pipeline(args):
-    print("\n\n\nbenchmark_npz_ext_pretrain_pipeline():")
+def benchmark_iterable_pretrain_pipeline(args):
+    print("\n\n\nbenchmark_iterable_pretrain_pipeline():")
     start = timer()
     last = start
 
@@ -217,6 +218,50 @@ def benchmark_npz_ext_pretrain_pipeline(args):
         if batch_idx == 0:
             first = timer()
             print(f"batch_list[0]['data'].shape: {batch_list[0]['data'].shape}")
+        print(f"{(timer() - last):.3f} secs for this batch")
+        last = timer()
+
+    last = timer()
+
+    time_first_batch = first - start
+    time_per_batch = (last - start) / (batch_idx + 1)
+    time_per_batch_without_first = (last - first) / (batch_idx + 1)
+
+    print(f"{time_first_batch:.3f} secs for the first batch")
+    print(f"{time_per_batch:.3f} secs per batch")
+    print(f"{time_per_batch_without_first:.3f} secs per batch without counting first batch")
+
+    mlflow.log_metric(key="time_per_batch_without_first", value=time_per_batch_without_first, step=0)
+    mlflow.log_metric(key="time_per_batch", value=time_per_batch, step=0)
+    mlflow.log_metric(key="time_first_batch", value=time_first_batch, step=0)
+
+
+def benchmark_callable_pretrain_pipeline(args):
+    print("\n\n\nbenchmark_callable_pretrain_pipeline():")
+    start = timer()
+    last = start
+
+    pipe = get_callable_pretrain_pipeline(
+        data_dir=args.data_dir,
+        variables=args.variables,
+        batch_size=args.batch_size,
+        num_threads=args.num_threads,
+        device_id=args.device_id,
+        # random_shuffle=args.random_shuffle,
+        # initial_fill=args.initial_fill,
+        # read_ahead=args.read_ahead,
+        # seed=args.seed,
+    )
+
+    # dali_iter = DALIGenericIterator(pipe, ["data"], reader_name="Reader")
+    dali_iter = DALIGenericIterator(pipe, ["data"])
+
+    for batch_idx, batch_list in enumerate(dali_iter):
+        print(f"batch_idx: {batch_idx:05}")
+        if batch_idx == 0:
+            first = timer()
+            print(f"batch_list[0]['data'].shape: {batch_list[0]['data'].shape}")
+        print(f"batch_list[0]['data'].shape: {batch_list[0]['data'].shape}")
         print(f"{(timer() - last):.3f} secs for this batch")
         last = timer()
 
@@ -282,11 +327,12 @@ def get_parsed_args():
 
 def main():
     args = get_parsed_args()
-    # test_pipe_npz_ext_pretrain_single_batch(args)
-    # benchmark_npz_ext_pretrain_pipeline(args)
+    # test_iterable_pretrain_single_batch(args)
+    # benchmark_iterable_pretrain_pipeline(args)
 
     # test_pipe_npy_single_batch(args)
     test_callable_pretrain_single_batch(args)
+    benchmark_callable_pretrain_pipeline(args)
     print("\n\n\n")
 
 
