@@ -177,6 +177,11 @@ class TartanAirVideoDataset(data.Dataset):
 
         if self.is_write_to_ffcv_beton:
             for modality in item:
+                print("type(item)", type(item))
+                print("type(item[modality])", type(item[modality]))
+                print("modality", modality)
+                print("item", item)
+                print("item[modality]", item[modality])
                 item[modality] = np.asarray(item[modality])
 
             # todo is_write_to_ffcv_beton + mask  is currently not tested
