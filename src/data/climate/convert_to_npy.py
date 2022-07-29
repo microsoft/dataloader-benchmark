@@ -26,7 +26,7 @@ def npz2npyforecast(file, predict_range=6):
 
 def convert(path, outdir, use):
     files = glob.glob(os.path.join(path, "*.npz"))
-    os.makedirs(os.path.join(outdir, use), exist_ok=True)
+    os.makedirs(outdir, exist_ok=True)
     for file in tqdm(files):
         if use == "pretrain":
             newdata = npz2npyconcat(file)
