@@ -31,14 +31,14 @@ def convert(path, outdir, use):
         if use == "pretrain":
             newdata = npz2npyconcat(file)
 
-            newfile = os.path.join(outdir, use, os.path.basename(file).replace(".npz", ".npy"))
+            newfile = os.path.join(outdir, os.path.basename(file).replace(".npz", ".npy"))
             np.save(newfile, newdata)
 
         else:
             newdata_in, newdata_out = npz2npyforecast(file)
             fname = os.path.basename(file).replace(".npz", ".npy")
-            newfile_in = os.path.join(outdir, use, f"input_{fname}")
-            newfile_out = os.path.join(outdir, use, f"output_{fname}")
+            newfile_in = os.path.join(outdir, f"input_{fname}")
+            newfile_out = os.path.join(outdir, f"output_{fname}")
             np.save(newfile_in, newdata_in)
             np.save(newfile_out, newdata_out)
 
@@ -47,14 +47,17 @@ def parse_args():
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("path", help="Path to npz files")
-    parser.add_argument("outdir", help="Path to output npy files")
+    parser.add_argument("--path", help="Path to npz files")
+    parser.add_argument("--outdir", help="Path to output npy files")
     parser.add_argument("--use", type=str, default="pretrain")
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
+    # args.path = "/datadrive/weatherstorage2datasets/1.40625deg_yearly_np/train"
+    # args.outdir = "/datadrive/local_datasets/climate_npy/1.40625deg_yearly_np/pretrain/train"
+    # args.use = "pretrain"
     convert(args.path, args.outdir, args.use)
 
 

@@ -1,0 +1,50 @@
+description: dataloader-benchmark
+
+target:
+  service: aml
+  name: F32s-v2-ded
+
+environment:
+  registry: commondockerimages.azurecr.io
+  username: commondockerimages
+  image: dataloader-benchmark:latest
+  setup:
+    - pip install -e .
+
+# $CONFIG_DIR is expanded to the directory of this config file.
+code:
+  local_dir: $CONFIG_DIR/../
+
+storage:
+  data:
+    storage_account_name: weatherdatastorage2
+    container_name: datasets
+    mount_dir: /mnt/data
+    mount_options: ["--file-cache-timeout-in-seconds=0"]
+  data_out:
+    storage_account_name: weatherdatastorage2
+    container_name: datasets-npy
+    is_output: True
+
+# some environment variables to ease up setting of jobs
+env_defaults:
+  use: pretrain
+  npz_path: /mnt/data/1.40625_yearly_np/train
+  npy_path: /mnt/data_out/1.40625_yearly_np/pretrain/train
+  cpu_or_gpu: C
+  num_cpus: 32
+  num_nodes: 1
+
+jobs:
+  - name: climate_convert_npz_to_npy_${npz_path}_${npy_path}
+    sku: ${num_nodes}x${cpu_or_gpu}${num_cpus}
+    submit_args:
+      container_args:
+        shm_size: 640g
+      env: { AZUREML_COMPUTE_USE_COMMON_RUNTIME: True }
+    command:
+      - python src/benchmarks/azure_monitor.py &
+      - python src/data/climate/convert_to_npy.py
+        --path ${npz_path}
+        --outdir ${npy_path}
+        --use ${use}
