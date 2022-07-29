@@ -1,0 +1,52 @@
+description: dataloader-benchmark
+
+target:
+  service: aml
+  name: F32s-v2-ded
+
+environment:
+  registry: commondockerimages.azurecr.io
+  username: commondockerimages
+  image: dataloader-benchmark:latest-ffcv
+  setup:
+    - pip install mlflow azureml-mlflow azureml-core
+    - pip install -e .
+
+# $CONFIG_DIR is expanded to the directory of this config file.
+code:
+  local_dir: $CONFIG_DIR/../
+
+storage:
+  data:
+    storage_account_name: commondatasets2
+    container_name: commondatasets
+    mount_options: ["--file-cache-timeout-in-seconds=0"]
+  results:
+    storage_account_name: ramadaanaml
+    container_name: tartanairffcv
+    is_output: True
+
+# some environment variables to ease up setting of jobs
+env_defaults:
+  dataset: tartanair
+  tartanair_ann_file: /mnt/data/tartanair-release1/train_ann_debug_ratnesh_100_frames.json
+  tartanair_output_beton_file: /mnt/results/tartanair-ffcv/train_ann_debug_ratnesh_100_frames.beton
+  cpu_or_gpu: C
+  num_cpus: 32
+  num_nodes: 1
+
+jobs:
+  # - name: convert_${dataset}_to_ffcv_${tartanair_ann_file}_${tartanair_output_beton_file}
+  - name: convert_${dataset}_to_ffcv_${tartanair_ann_file}
+    sku: ${num_nodes}x${cpu_or_gpu}${num_cpus}
+    submit_args:
+      container_args:
+        shm_size: 650g
+      env: { AZUREML_COMPUTE_USE_COMMON_RUNTIME: True }
+    command:
+      - export MKL_THREADING_LAYER="GNU"
+      - python src/benchmarks/azure_monitor.py &
+      - python src/data/tartanair/convert_to_ffcv.py
+        --dataset ${dataset}
+        --tartanair_ann_file ${tartanair_ann_file}
+        --tartanair_output_beton_file ${tartanair_output_beton_file}
