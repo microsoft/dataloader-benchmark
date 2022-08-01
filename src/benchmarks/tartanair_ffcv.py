@@ -3,9 +3,10 @@ import distutils
 
 from benchmarker import Benchmarker
 from ffcv.fields.decoders import NDArrayDecoder, SimpleRGBImageDecoder
-from ffcv.loader import Loader, OrderOption
+from ffcv.loader import Loader
 from ffcv.pipeline.compiler import Compiler
 from ffcv.transforms import ToTensor
+from ffcv_common import get_order_option_ffcv
 
 Compiler.set_enabled(True)
 
@@ -72,18 +73,6 @@ def get_parsed_args():
     args = parser.parse_args()
 
     return args
-
-
-def get_order_option_ffcv(order):
-    if order == "random":
-        order_option = OrderOption.RANDOM
-    elif order == "quasi_random":
-        order_option = OrderOption.QUASI_RANDOM
-    elif order == "sequential":
-        order_option = OrderOption.SEQUENTIAL
-    else:
-        raise ValueError(f"Unknown order option: {order}")
-    return order_option
 
 
 def main(args):

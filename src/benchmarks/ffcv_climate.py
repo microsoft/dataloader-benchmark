@@ -4,8 +4,9 @@ from timeit import default_timer as timer
 
 import mlflow
 from ffcv.fields.decoders import NDArrayDecoder
-from ffcv.loader import Loader, OrderOption
+from ffcv.loader import Loader
 from ffcv.transforms import ToTensor
+from ffcv_common import get_order_option_ffcv
 
 
 def parse_args():
@@ -19,18 +20,6 @@ def parse_args():
     args = parser.parse_args()
 
     return args
-
-
-def get_order_option_ffcv(order):
-    if order == "random":
-        order_option = OrderOption.RANDOM
-    elif order == "quasi_random":
-        order_option = OrderOption.QUASI_RANDOM
-    elif order == "sequential":
-        order_option = OrderOption.SEQUENTIAL
-    else:
-        raise ValueError(f"Unknown order option: {order}")
-    return order_option
 
 
 def benchmark_climate_ffcv(args):
