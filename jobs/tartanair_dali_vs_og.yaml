@@ -33,7 +33,7 @@ search:
     name: tartanair_og_{auto:10s}
     sku: G1
     command:
-      - python src/benchmarks/tartanair_og_dataloader.py
+      - python src/benchmarks/tartanair_og.py
         --train_ann_file /mnt/data/tartanair-release1/train_ann_debug_ratnesh.json
         --benchmark_results_file /mnt/data_output/benchmark_modalities_results_new.csv
         --batch_size 64

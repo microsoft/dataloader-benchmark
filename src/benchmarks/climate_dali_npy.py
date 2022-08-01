@@ -307,8 +307,8 @@ def benchmark_parallel_callable_pretrain_pipeline(args):
     last = timer()
 
     time_first_batch = first - start
-    time_per_batch = (last - start) / (batch_idx + 1)
-    time_per_batch_without_first = (last - first) / (batch_idx + 1)
+    time_per_batch = (last - start) / num_batches
+    time_per_batch_without_first = (last - first) / num_batches
 
     print(f"{time_first_batch:.3f} secs for the first batch")
     print(f"{time_per_batch:.3f} secs per batch")
