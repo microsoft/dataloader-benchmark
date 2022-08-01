@@ -32,7 +32,8 @@ jobs:
   - name: climate_dali_test
     sku: G1
     command:
-      - python src/benchmarks/azure_monitor.py &
+      - export MKL_THREADING_LAYER="GNU"
+      - python src/system_monitor.py --watch_every_n_seconds 1 &
       - python src/benchmarks/climate_dali_npy.py
         --batch_size 32
         --data_dir /mnt/data/1.40625deg_monthly_np/train
@@ -46,7 +47,8 @@ jobs:
   - name: climate_dali_parallel_ext_callable_pipeline
     sku: G1
     command:
-      - python src/benchmarks/azure_monitor.py &
+      - export MKL_THREADING_LAYER="GNU"
+      - python src/system_monitor.py --watch_every_n_seconds 1 &
       - python src/benchmarks/climate_dali_npy.py
         --batch_size 32
         --data_dir /mnt/data/1.40625deg_monthly_np/val
@@ -64,7 +66,8 @@ jobs:
   - name: climate_dali_parallel_ext_callable_pipeline_sharded
     sku: G1
     command:
-      - python src/benchmarks/azure_monitor.py &
+      - export MKL_THREADING_LAYER="GNU"
+      - python src/system_monitor.py --watch_every_n_seconds 1 &
       - python src/benchmarks/climate_dali_npy_sharded.py
         --batch_size 32
         --data_dir /mnt/data/1.40625deg_monthly_np/val

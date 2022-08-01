@@ -34,7 +34,8 @@ search:
     name: tartanair_ffcv_modalities_image_left_depth_left_flow_flow_seq_len_1_{auto:10s}
     sku: G1
     command:
-      - python src/benchmarks/azure_monitor.py &
+      - export MKL_THREADING_LAYER="GNU"
+      - python src/system_monitor.py --watch_every_n_seconds 1 &
       - python src/benchmarks/tartanair_ffcv.py
         --dataset tartanair
         --beton_file /mnt/data/tartanair-release1/tartan_abandonedfactory_ratnesh.beton

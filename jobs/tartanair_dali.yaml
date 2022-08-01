@@ -32,7 +32,8 @@ jobs:
   - name: tartanair_dali_modalities_image_left_seq_len_1
     sku: G1
     command:
-      - python src/benchmarks/azure_monitor.py &
+      - export MKL_THREADING_LAYER="GNU"
+      - python src/system_monitor.py --watch_every_n_seconds 1 &
       - python src/benchmarks/tartanair_dali.py
         --batch_size 64
         --image_dir /mnt/data/tartanair-release1-dali/abandonedfactory/Easy/P000/
@@ -45,7 +46,8 @@ jobs:
   - name: tartanair_dali_modalities_image_left_seq_len_16
     sku: G1
     command:
-      - python src/benchmarks/azure_monitor.py &
+      - export MKL_THREADING_LAYER="GNU"
+      - python src/system_monitor.py --watch_every_n_seconds 1 &
       - python src/benchmarks/tartanair_dali_sequence.py
         --batch_size 64
         --sequence_length 16
@@ -59,7 +61,8 @@ jobs:
   - name: tartanair_dali_modalities_depth_left_seq_len_1
     sku: G1
     command:
-      - python src/benchmarks/azure_monitor.py &
+      - export MKL_THREADING_LAYER="GNU"
+      - python src/system_monitor.py --watch_every_n_seconds 1 &
       - python src/benchmarks/tartanair_dali_npy.py
         --batch_size 64
         --is_amlt yes

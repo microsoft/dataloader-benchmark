@@ -43,7 +43,8 @@ jobs:
         shm_size: 640g
       env: { AZUREML_COMPUTE_USE_COMMON_RUNTIME: True }
     command:
-      - python src/benchmarks/azure_monitor.py &
+      - export MKL_THREADING_LAYER="GNU"
+      - python src/system_monitor.py --watch_every_n_seconds 1 &
       - python src/data/climate/convert_to_npy.py
         --path ${npz_path}
         --outdir ${npy_path}
