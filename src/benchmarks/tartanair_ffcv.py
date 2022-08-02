@@ -11,7 +11,7 @@ from utils_ffcv import get_order_option
 Compiler.set_enabled(True)
 
 
-def get_ffcv_dataloader(args):
+def get_dataloader(args):
     # Dataset specific
     PIPELINES = {
         "rgb": [SimpleRGBImageDecoder(), ToTensor()],
@@ -34,8 +34,7 @@ def get_ffcv_dataloader(args):
 
 
 def benchmark(args):
-    dataloader = get_ffcv_dataloader(args)
-
+    dataloader = get_dataloader(args)
     benchmarker = Benchmarker()
     benchmarker.set_dataloader(dataloader)
     benchmarker.benchmark_tartanair(args)
@@ -43,6 +42,8 @@ def benchmark(args):
 
 def get_parsed_args():
     parser = argparse.ArgumentParser(description="FFCV options")
+    parser.add_argument("--benchmark_results_file", default="benchmark_results_tartanair.csv", type=str)
+
     parser.add_argument("--dataset", type=str, default="tartanair", help="dataset type to use for benchmarking")
     parser.add_argument(
         "--beton_file", type=str, default="./tartan_abandonedfactory_ratnesh.beton", help="path to beton file"

@@ -4,8 +4,7 @@ import mlflow
 
 
 class Benchmarker:
-    def __init__(self, copy_to_gpu=True, verbose=False):
-        self.copy_to_gpu = copy_to_gpu
+    def __init__(self, verbose=False):
         self.verbose = verbose
 
     def set_dataloader(self, dataloader):
@@ -20,12 +19,11 @@ class Benchmarker:
         num_batches = 0
 
         for batch_idx, batch in enumerate(self.dataloader):
-            if self.copy_to_gpu:
-                start_copy = timer()
-                for key, value in batch[0].items():
-                    value.cuda()
-                batch[1].cuda()
-                time_copy = time_copy + (timer() - start_copy)
+            start_copy = timer()
+            for key, value in batch[0].items():
+                value.cuda()
+            batch[1].cuda()
+            time_copy = time_copy + (timer() - start_copy)
 
             if batch_idx == 0:
                 first = timer()
@@ -39,36 +37,42 @@ class Benchmarker:
         time_first_batch = first - start
         time_per_batch = (last - start) / num_batches
         time_per_batch_without_first = (last - first) / (num_batches - 1)
+        time_copy_per_batch = time_copy / num_batches
 
-        mlflow.log_metric(key="num_workers", value=args.workers, step=0)
-        mlflow.log_metric(key="batch_size", value=args.batch_size, step=0)
-        mlflow.log_metric(key="num_seq", value=args.num_seq, step=0)
-        mlflow.log_metric(key="seq_len", value=args.seq_len, step=0)
-        mlflow.log_metric(key="time_per_batch_without_first", value=time_per_batch_without_first, step=0)
-        mlflow.log_metric(key="time_per_batch", value=time_per_batch, step=0)
-        mlflow.log_metric(key="time_first_batch", value=time_first_batch, step=0)
+        metrics = {}
+        metrics["num_workers"] = args.num_workers
+        metrics["batch_size"] = args.batch_size
+        metrics["num_seq"] = args.num_seq
+        metrics["seq_len"] = args.seq_len
+        metrics["time_per_batch_without_first"] = time_per_batch_without_first
+        metrics["time_per_batch"] = time_per_batch
+        metrics["time_first_batch"] = time_first_batch
+        metrics["time_copy_per_batch"] = time_copy_per_batch
+        mlflow.log_metrics(metrics, step=0)
 
-        if not self.copy_to_gpu:
-            with open(args.benchmark_results_file, "a") as f:
-                f.write(
-                    f"{' '.join(args.modalities)}, {args.train_transform}, {args.batch_size}, {args.workers}, {args.num_seq}, {args.seq_len}, {time_first_batch:.3f}, {time_per_batch:.3f}, {time_per_batch_without_first:.3f}\n"
-                )
-
-        else:
-            time_copy_per_batch = time_copy / num_batches
-            print(f"{time_copy_per_batch:.3f} secs per batch for copying from cpu to gpu")
-            mlflow.log_metric(key="time_copy_per_batch", value=time_copy_per_batch, step=0)
-            with open(args.benchmark_results_file, "a") as f:
-                f.write(
-                    f"{' '.join(args.modalities)}, {args.train_transform}, {args.batch_size}, {args.workers}, {args.num_seq}, {args.seq_len}, {time_first_batch:.3f}, {time_per_batch:.3f}, {time_per_batch_without_first:.3f}, {time_copy_per_batch:.3f}\n"
-                )
+        with open(args.benchmark_results_file, "a") as f:
+            f.write(
+                f"{' '.join(args.modalities)}, "
+                f"{args.train_transform}, "
+                f"{args.batch_size}, "
+                f"{args.workers}, "
+                f"{args.num_seq}, "
+                f"{args.seq_len}, "
+                f"{time_first_batch:.3f}, "
+                f"{time_per_batch:.3f}, "
+                f"{time_per_batch_without_first:.3f}, "
+                f"{time_copy_per_batch:.3f} "
+                f"\n"
+            )
 
         if self.verbose:
             print(f"{time_first_batch:.3f} secs for the first batch")
             print(f"{time_per_batch:.3f} secs per batch")
             print(f"{time_per_batch_without_first:.3f} secs per batch without counting first batch")
+            print(f"{time_copy_per_batch:.3f} secs per batch for copying from cpu to gpu")
 
     # todo clip_len / num_seq being used in mushr?
+    # todo copy_to_gpu for mushr is untested
     def benchmark_mushr(self, args):
         print(f"dataloader length: {len(self.dataloader)} batches")
 
@@ -78,12 +82,11 @@ class Benchmarker:
         num_batches = 0
 
         for batch_idx, batch in enumerate(self.dataloader):
-            if self.copy_to_gpu:
-                start_copy = timer()
-                for key, value in batch[0].items():
-                    value.cuda()
-                batch[1].cuda()
-                time_copy = time_copy + (timer() - start_copy)
+            start_copy = timer()
+            for key, value in batch[0].items():
+                value.cuda()
+            batch[1].cuda()
+            time_copy = time_copy + (timer() - start_copy)
 
             if batch_idx == 0:
                 first = timer()
@@ -97,31 +100,82 @@ class Benchmarker:
         time_first_batch = first - start
         time_per_batch = (last - start) / num_batches
         time_per_batch_without_first = (last - first) / (num_batches - 1)
+        time_copy_per_batch = time_copy / num_batches
 
-        mlflow.log_metric(key="num_workers", value=args.workers, step=0)
-        mlflow.log_metric(key="batch_size", value=args.batch_size, step=0)
-        mlflow.log_metric(key="num_seq", value=args.num_seq, step=0)
-        mlflow.log_metric(key="seq_len", value=args.seq_len, step=0)
-        mlflow.log_metric(key="time_per_batch_without_first", value=time_per_batch_without_first, step=0)
-        mlflow.log_metric(key="time_per_batch", value=time_per_batch, step=0)
-        mlflow.log_metric(key="time_first_batch", value=time_first_batch, step=0)
+        metrics = {}
+        metrics["num_workers"] = args.num_workers
+        metrics["batch_size"] = args.batch_size
+        metrics["num_seq"] = args.num_seq
+        metrics["seq_len"] = args.seq_len
+        metrics["time_per_batch_without_first"] = time_per_batch_without_first
+        metrics["time_per_batch"] = time_per_batch
+        metrics["time_first_batch"] = time_first_batch
+        metrics["time_copy_per_batch"] = time_copy_per_batch
+        mlflow.log_metrics(metrics, step=0)
 
-        if not self.copy_to_gpu:
-            with open(args.benchmark_results_file, "a") as f:
-                f.write(
-                    f"{args.batch_size}, {args.workers}, {args.num_seq}, {args.seq_len}, {time_first_batch:.3f}, {time_per_batch:.3f}, {time_per_batch_without_first:.3f}\n"
-                )
-
-        else:
-            time_copy_per_batch = time_copy / num_batches
-            print(f"{time_copy_per_batch:.3f} secs per batch for copying from cpu to gpu")
-            mlflow.log_metric(key="time_copy_per_batch", value=time_copy_per_batch, step=0)
-            with open(args.benchmark_results_file, "a") as f:
-                f.write(
-                    f"{args.batch_size}, {args.workers}, {args.num_seq}, {args.seq_len}, {time_first_batch:.3f}, {time_per_batch:.3f}, {time_per_batch_without_first:.3f}, {time_copy_per_batch:.3f}\n"
-                )
+        with open(args.benchmark_results_file, "a") as f:
+            f.write(
+                f"{args.batch_size}, "
+                f"{args.workers}, "
+                f"{args.num_seq}, "
+                f"{args.seq_len}, "
+                f"{time_first_batch:.3f}, "
+                f"{time_per_batch:.3f}, "
+                f"{time_per_batch_without_first:.3f}, "
+                f"{time_copy_per_batch:.3f}\n"
+            )
 
         if self.verbose:
             print(f"{time_first_batch:.3f} secs for the first batch")
             print(f"{time_per_batch:.3f} secs per batch")
             print(f"{time_per_batch_without_first:.3f} secs per batch without counting first batch")
+            print(f"{time_copy_per_batch:.3f} secs per batch for copying from cpu to gpu")
+
+    def benchmark_climate(self, args):
+        time_copy = 0.0
+        num_batches = 0
+        start = timer()
+        last = start
+        for idx, batch in enumerate(dl):
+            start_copy = timer()
+            if args.use == "forecast":
+                x, y = batch[0].cuda(), batch[1].cuda()
+            elif args.use == "pretrain":
+                traj = batch[0].cuda()
+            time_copy += timer() - start_copy
+            num_batches += 1
+            if idx == 0:
+                first = timer()
+
+        last = timer()
+
+        time_copy_per_batch = time_copy / num_batches
+        time_first_batch = first - start
+        time_per_batch = (last - start) / num_batches
+        time_per_batch_without_first = (last - first) / (num_batches - 1)
+
+        metrics = {}
+        metrics["num_workers"] = args.num_workers
+        metrics["batch_size"] = args.batch_size
+        metrics["time_per_batch_without_first"] = time_per_batch_without_first
+        metrics["time_per_batch"] = time_per_batch
+        metrics["time_first_batch"] = time_first_batch
+        metrics["time_copy_per_batch"] = time_copy_per_batch
+        mlflow.log_metrics(metrics, step=0)
+
+        with open(args.benchmark_results_file, "a") as f:
+            f.write(
+                f"{args.use}, "
+                f"{args.batch_size}, "
+                f"{args.workers}, "
+                f"{time_first_batch:.3f}, "
+                f"{time_per_batch:.3f}, "
+                f"{time_per_batch_without_first:.3f}, "
+                f"{time_copy_per_batch:.3f}\n"
+            )
+
+        if self.verbose:
+            print(f"{time_first_batch:.3f} secs for the first batch")
+            print(f"{time_per_batch:.3f} secs per batch")
+            print(f"{time_per_batch_without_first:.3f} secs per batch without counting first batch")
+            print(f"{time_copy_per_batch:.3f} secs per batch for copying from cpu to gpu")

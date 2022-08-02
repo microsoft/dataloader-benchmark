@@ -46,6 +46,7 @@ def main(args):
 
 def get_parsed_args():
     parser = argparse.ArgumentParser(description="FFCV options")
+    parser.add_argument("--benchmark_results_file", default="benchmark_results_mushr.csv", type=str)
     parser.add_argument("--dataset", type=str, default="mushr", help="dataset type to use for benchmarking")
     parser.add_argument(
         "--beton_file", type=str, default="./tartan_abandonedfactory_ratnesh.beton", help="path to beton file"

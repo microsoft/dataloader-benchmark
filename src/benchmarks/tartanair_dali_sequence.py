@@ -125,7 +125,7 @@ def get_parsed_args():
     import argparse
 
     parser = argparse.ArgumentParser()
-
+    parser.add_argument("--benchmark_results_file", default="benchmark_results_tartanair.csv", type=str)
     parser.add_argument("--batch_size", type=int, default=64)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--num_threads", type=int, default=os.cpu_count())

@@ -1,12 +1,11 @@
 import argparse
 import glob
 import os
-from timeit import default_timer as timer
 
-import mlflow
 import numpy as np
 import torch
 import torchdata.datapipes as dp
+from benchmarker import Benchmarker
 from torch.utils.data import DataLoader
 
 from src.data.climate.era5_datapipe import (
@@ -18,10 +17,6 @@ from src.data.climate.era5_datapipe import (
     IndividualForecastDataIter,
 )
 
-# NPY = False
-# NPY_PATH = "/mnt/data/1.40625/_yearly_np"
-# ZARRY_PATH = "/mnt/data/1.40625_yearly"
-# DEFAULT_VARS = list(NAME_MAP.values())
 DEFAULT_VARS = ["z", "r", "u", "v", "t", "t2m", "u10", "v10"]
 
 
@@ -82,8 +77,23 @@ def get_datapipe(path, batchsize=32, use="forecast", dataformat="npy"):
     return data
 
 
+def get_dataloader(args):
+    print(f"Dataset: {args.dataset}\n \t {args.datapath}")
+    data = get_datapipe(args.datapath, args.batch_size, args.use, args.dataset)
+    dataloader = DataLoader(data, batch_size=None, num_workers=args.num_workers)
+    return dataloader
+
+
+def benchmark(args):
+    dataloader = get_dataloader(args)
+    benchmarker = Benchmarker()
+    benchmarker.set_dataloader(dataloader)
+    benchmarker.benchmark_climate(args)
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="FFCV options")
+    parser.add_argument("--benchmark_results_file", default="benchmark_results_climate.csv", type=str)
     parser.add_argument("--dataset", type=str, default="npy", help="Dataset to use for benchmarking")
     parser.add_argument("--datapath", type=str, default=None, help="Path to dataset")
     parser.add_argument("--batch_size", type=int, default=32, help="Batchsize for dataloader")
@@ -93,44 +103,10 @@ def parse_args():
     return args
 
 
-def benchmark(args):
-    print("===== Benchmarking =====")
-    print(f"Dataset: {args.dataset}\n \t {args.datapath}")
-    data = get_datapipe(args.datapath, args.batch_size, args.use, args.dataset)
-    dl = DataLoader(data, batch_size=None, num_workers=args.num_workers)
-    time_copy = 0.0
-    num_batches = 0
-    start = timer()
-    last = start
-    for idx, batch in enumerate(dl):
-        start_copy = timer()
-        if args.use == "forecast":
-            x, y = batch[0].cuda(), batch[1].cuda()
-        elif args.use == "pretrain":
-            traj = batch[0].cuda()
-        time_copy += timer() - start_copy
-        num_batches += 1
-        if idx == 0:
-            first = timer()
-
-    last = timer()
-
-    time_copy_per_batch = time_copy / num_batches
-    time_first_batch = first - start
-    time_per_batch = (last - start) / num_batches
-    time_per_batch_without_first = (last - first) / (num_batches - 1)
-
-    print(f"{time_first_batch:.3f} secs for the first batch")
-    print(f"{time_per_batch:.3f} secs per batch")
-    print(f"{time_per_batch_without_first:.3f} secs per batch without counting first batch")
-    print(f"{time_copy_per_batch:.3f} secs per batch for copying from cpu to gpu")
-    mlflow.log_metric(key="num_workers", value=args.num_workers, step=0)
-    mlflow.log_metric(key="batch_size", value=args.batch_size, step=0)
-    mlflow.log_metric(key="time_per_batch_without_first", value=time_per_batch_without_first, step=0)
-    mlflow.log_metric(key="time_per_batch", value=time_per_batch, step=0)
-    mlflow.log_metric(key="time_first_batch", value=time_first_batch, step=0)
-    mlflow.log_metric(key="time_copy_per_batch", value=time_copy_per_batch, step=0)
+def main(args):
+    benchmark(args)
 
 
 if __name__ == "__main__":
-    benchmark(parse_args())
+    args = parse_args()
+    main(args)

@@ -63,7 +63,7 @@ def parse_args():
         type=str,
     )
     parser.add_argument("--val_ann_file", default=" ", type=str)
-    parser.add_argument("--benchmark_results_file", default="benchmark_results.csv", type=str)
+    parser.add_argument("--benchmark_results_file", default="benchmark_results_tartanair.csv", type=str)
     parser.add_argument(
         "--train_transform",
         default="TartanAirVideoTransformWithAugmentation",
