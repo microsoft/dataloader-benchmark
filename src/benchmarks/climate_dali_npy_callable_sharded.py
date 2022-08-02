@@ -9,7 +9,6 @@ from timeit import default_timer as timer
 import mlflow
 import numpy as np
 import nvidia.dali.fn as fn
-
 from nvidia.dali import pipeline_def
 from nvidia.dali.plugin.pytorch import DALIGenericIterator
 
@@ -127,57 +126,6 @@ def get_parallel_callable_pretrain_pipeline_sharded(
         # reader_name="Reader",
     )
     return data
-
-
-def test_parallel_callable_pretrain_single_batch_sharded(args):
-    print("\n\n\ntest_parallel_callable_pretrain_single_batch_sharded():")
-    pipe_one = get_parallel_callable_pretrain_pipeline_sharded(
-        data_dir=args.data_dir,
-        variables=args.variables,
-        batch_size=args.batch_size,
-        num_threads=args.num_threads,
-        device_id=args.device_id,
-        debug_print=args.debug_print,
-        debug_print_each_sample=args.debug_print_each_sample,
-        py_num_workers=args.py_num_workers,
-        shard_id=0,
-        num_shards=2,
-        # random_shuffle=args.random_shuffle,
-        # initial_fill=args.initial_fill,
-        # read_ahead=args.read_ahead,
-        # seed=args.seed,
-    )
-    pipe_one.build()
-
-    pipe_two = get_parallel_callable_pretrain_pipeline_sharded(
-        data_dir=args.data_dir,
-        variables=args.variables,
-        batch_size=args.batch_size,
-        num_threads=args.num_threads,
-        device_id=args.device_id,
-        debug_print=args.debug_print,
-        debug_print_each_sample=args.debug_print_each_sample,
-        py_num_workers=args.py_num_workers,
-        shard_id=1,
-        num_shards=2,
-        # random_shuffle=args.random_shuffle,
-        # initial_fill=args.initial_fill,
-        # read_ahead=args.read_ahead,
-        # seed=args.seed,
-    )
-    pipe_two.build()
-
-    pipe_out_1 = pipe_one.run()
-    pipe_out_2 = pipe_two.run()
-
-    batch_1 = [np.array(pipe_out_1[0][sample_idx]) for sample_idx in range(args.batch_size)]
-    batch_2 = [np.array(pipe_out_2[0][sample_idx]) for sample_idx in range(args.batch_size)]
-
-    for (sample_idx, (sample_1, sample_2)) in enumerate(zip(batch_1, batch_2)):
-        print(f"sample_1 {sample_idx:05}, variable {args.variables[0]}, shape: {sample_1.shape}")
-        print(f"sample_2 {sample_idx:05}, variable {args.variables[0]}, shape: {sample_2.shape}")
-        # for k in args.variables:
-        # print(f"sample {sample_idx:05}, variable {args.}, shape: {sample[k].shape}")
 
 
 def test_parallel_callable_pretrain_single_batch_sharded_partial(args):
@@ -326,7 +274,6 @@ def get_parsed_args():
 
 def main():
     args = get_parsed_args()
-    # test_parallel_callable_pretrain_single_batch_sharded(args)
     # test_parallel_callable_pretrain_single_batch_sharded_partial(args)
     benchmark_parallel_callable_pretrain_pipeline_sharded(args)
 
