@@ -6,7 +6,7 @@ import mlflow
 from ffcv.fields.decoders import NDArrayDecoder
 from ffcv.loader import Loader
 from ffcv.transforms import ToTensor
-from ffcv_common import get_order_option_ffcv
+from utils_ffcv import get_order_option
 
 
 def parse_args():
@@ -40,7 +40,7 @@ def benchmark_climate_ffcv(args):
         args.beton_file,
         batch_size=args.batch_size,
         num_workers=args.num_workers,
-        order=get_order_option_ffcv(args.order),
+        order=get_order_option(args.order),
         os_cache=args.os_cache,
         pipelines=PIPELINES,
     )

@@ -2,10 +2,9 @@ from src.data.tartanair import build_loader
 from src.utils.opts import parse_args
 
 
-def get_tartanair_dataset(args):
-    train_dataset, _, train_loader, _, _ = build_loader(args)
-    # train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
-    return train_dataset, train_loader
+def get_dataloader(args):
+    _, _, train_loader, _, _ = build_loader(args)
+    return train_loader
 
 
 def trace_handler(p):
@@ -17,8 +16,8 @@ def trace_handler(p):
 def pytorch_profiler_schedule(args):
     from torch.profiler import ProfilerActivity, profile, schedule
 
-    train_dataset, train_dataloader = get_tartanair_dataset(args)
-    print(len(train_dataloader))
+    dataloader = get_dataloader(args)
+    print(len(dataloader))
     with profile(
         activities=[ProfilerActivity.CPU],
         profile_memory=True,
@@ -26,7 +25,7 @@ def pytorch_profiler_schedule(args):
         schedule=schedule(wait=1, warmup=1, active=2),
         on_trace_ready=trace_handler,
     ) as prof:
-        for batch_idx, _ in enumerate(train_dataloader):
+        for batch_idx, _ in enumerate(dataloader):
             print(f"batch_idx {batch_idx}")
 
 

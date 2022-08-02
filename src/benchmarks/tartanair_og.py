@@ -1,18 +1,17 @@
-import torch
 from benchmarker import Benchmarker
+from torch.utils.data import DataLoader
 
 from src.data.tartanair import build_loader
 from src.data.tartanair.build import TartanAirNoTransform, TartanAirVideoDataset
 from src.utils.opts import parse_args
 
 
-def get_tartanair_dataset(args):
-    train_dataset, _, train_loader, _, _ = build_loader(args)
-    # train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
-    return train_dataset, train_loader
+def get_dataloader(args):
+    _, _, train_loader, _, _ = build_loader(args)
+    return train_loader
 
 
-def get_tartanair_dataset_no_transform(args):
+def get_dataloader_no_transform(args):
     transform = TartanAirNoTransform()
     dataset = TartanAirVideoDataset(
         ann_file=args.train_ann_file,
@@ -23,23 +22,20 @@ def get_tartanair_dataset_no_transform(args):
         video_name_keyword=None,
     )
 
-    dataloader = torch.utils.data.DataLoader(
-        dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers
-    )
+    dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
 
     return dataloader
 
 
 def benchmark(args):
-    _, train_dataloader = get_tartanair_dataset(args)
+    dataloader = get_dataloader(args)
 
     benchmarker = Benchmarker()
-    benchmarker.set_dataloader(train_dataloader)
+    benchmarker.set_dataloader(dataloader)
     benchmarker.benchmark_tartanair(args)
 
 
 def main(args):
-    print("start")
     benchmark(args)
 
 
