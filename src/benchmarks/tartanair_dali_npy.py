@@ -1,10 +1,10 @@
 import distutils
 import os
-from timeit import default_timer as timer
 
 import mlflow
 import numpy as np
 import nvidia.dali.fn as fn
+from benchmarker import Benchmarker
 from nvidia.dali import pipeline_def
 from nvidia.dali.plugin.pytorch import DALIGenericIterator
 
@@ -22,28 +22,6 @@ def get_depth_image_pipeline(image_dir, device, random_shuffle, initial_fill, re
         name="Reader",
     )
     return data
-
-
-def test_pipe_single_batch(args):
-    print("\n\n\ntest_pipe_single_batch():")
-    pipe = get_depth_image_pipeline(
-        image_dir=args.image_dir,
-        batch_size=args.batch_size,
-        num_threads=args.num_threads,
-        device=args.device,
-        device_id=args.device_id,
-        random_shuffle=args.random_shuffle,
-        initial_fill=args.initial_fill,
-        read_ahead=args.read_ahead,
-        seed=args.seed,
-    )
-    pipe.build()
-    pipe_out = pipe.run()
-    batch = [np.array(pipe_out[0][sample_idx]) for sample_idx in range(args.batch_size)]
-    for sample_idx, sample in enumerate(batch):
-        print(
-            f"sample {sample_idx:05}, shape: {sample.shape}, sample.min(): {sample.min()}, sample.max(): {sample.max()}, sample.mean(): {sample.mean()}"
-        )
 
 
 # ref: https://github.com/castacks/tartanair_tools/blob/master/TartanAir_Sample.ipynb
@@ -109,11 +87,7 @@ def visualize_depth_image_pipeline(args):
     visualize_depth_images(image_batch=images, batch_size=args.batch_size, is_amlt=args.is_amlt, result_dir="debug_viz")
 
 
-def benchmark_pipeline(args):
-    print("\n\n\nbenchmark_pipeline():")
-    start = timer()
-    last = start
-
+def get_dataloader(args):
     pipe = get_depth_image_pipeline(
         image_dir=args.image_dir,
         batch_size=args.batch_size,
@@ -126,29 +100,15 @@ def benchmark_pipeline(args):
         seed=args.seed,
     )
 
-    dali_iter = DALIGenericIterator(pipe, ["data"], reader_name="Reader")
+    dataloader = DALIGenericIterator(pipe, ["data"], reader_name="Reader")
+    return dataloader
 
-    for batch_idx, batch_list in enumerate(dali_iter):
-        print(f"batch_idx: {batch_idx:05}")
-        if batch_idx == 0:
-            first = timer()
-            print(f"batch_list[0]['data'].shape: {batch_list[0]['data'].shape}")
-        print(f"{(timer() - last):.3f} secs for this batch")
-        last = timer()
 
-    last = timer()
-
-    time_first_batch = first - start
-    time_per_batch = (last - start) / (batch_idx + 1)
-    time_per_batch_without_first = (last - first) / (batch_idx + 1)
-
-    print(f"{time_first_batch:.3f} secs for the first batch")
-    print(f"{time_per_batch:.3f} secs per batch")
-    print(f"{time_per_batch_without_first:.3f} secs per batch without counting first batch")
-
-    mlflow.log_metric(key="time_per_batch_without_first", value=time_per_batch_without_first, step=0)
-    mlflow.log_metric(key="time_per_batch", value=time_per_batch, step=0)
-    mlflow.log_metric(key="time_first_batch", value=time_first_batch, step=0)
+def benchmark(args):
+    dataloader = get_dataloader(args)
+    benchmarker = Benchmarker(verbose=args.verbose, dataset="tartanair", library="dali")
+    benchmarker.set_dataloader(dataloader)
+    benchmarker.benchmark_tartanair(args)
 
 
 def get_parsed_args():
@@ -156,6 +116,7 @@ def get_parsed_args():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--benchmark_results_file", default="benchmark_results_tartanair.csv", type=str)
+    parser.add_argument("--verbose", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
     parser.add_argument("--batch_size", type=int, default=64)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--num_threads", type=int, default=os.cpu_count())
@@ -180,6 +141,28 @@ def get_parsed_args():
         type=lambda x: bool(distutils.util.strtobool(x)),
         help="If set to True, the header information for each file is cached, improving access speed.",
     )
+    parser.add_argument("--seq_len", default=1, type=int, help="number of frames in each video block")
+    parser.add_argument("--num_seq", default=1, type=int, help="number of video blocks")
+    # not used
+    parser.add_argument("--num_workers", default=6, type=int, help="number of cpu cores")
+
+    parser.add_argument(
+        "--modalities",
+        default=["depth_left"],
+        help="list of modalities (strings)",
+        nargs="+",
+        type=str,
+        choices=[
+            "image_left",
+            "image_right",
+            "depth_left",
+            "depth_right",
+            "flow_mask",
+            "flow_flow",
+            "seg_left",
+            "seg_right",
+        ],
+    )
 
     args = parser.parse_args()
     return args
@@ -187,11 +170,8 @@ def get_parsed_args():
 
 def main():
     args = get_parsed_args()
-    # test_pipe_single_batch(args)
-    benchmark_pipeline(args)
+    benchmark(args)
     visualize_depth_image_pipeline(args)
-
-    print("\n\n\n")
 
 
 if __name__ == "__main__":

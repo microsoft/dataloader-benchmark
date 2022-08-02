@@ -1,9 +1,9 @@
 import distutils
 import os
-from timeit import default_timer as timer
 
 import mlflow
 import nvidia.dali.fn as fn
+from benchmarker import Benchmarker
 from nvidia.dali import pipeline_def
 from nvidia.dali.pipeline import Pipeline
 from nvidia.dali.plugin.pytorch import DALIGenericIterator
@@ -28,7 +28,7 @@ def get_rgb_image_pipeline(image_dir, random_shuffle, initial_fill, device, img_
     )
     images_resized = fn.resize(images_crop, size=[img_dim, img_dim])
 
-    return images_resized, labels
+    return images_resized
 
 
 def visualize_rgb_images(image_batch, batch_size, is_amlt=False, result_num_cols=10, result_dir="debug_viz"):
@@ -107,11 +107,7 @@ def performance_tuning(args):
     print(stats["max_reserved_memory_size"])
 
 
-def benchmark_pipeline(args):
-    print("\n\n\nbenchmark_pipeline():")
-    start = timer()
-    last = start
-
+def get_dataloader(args):
     pipe = get_rgb_image_pipeline(
         batch_size=args.batch_size,
         device_id=args.device_id,
@@ -127,29 +123,16 @@ def benchmark_pipeline(args):
         # prefetch_queue_depth={"cpu_size": num_threads, "gpu_size": 1},
     )
 
-    dali_iter = DALIGenericIterator(pipe, ["data", "label"], reader_name="Reader")
+    dataloader = DALIGenericIterator(pipe, ["data"], reader_name="Reader")
 
-    for batch_idx, data in enumerate(dali_iter):
-        print(f"batch_idx: {batch_idx:05}")
-        if batch_idx == 0:
-            first = timer()
-        # print(data[0]["label"].shape, data[0]["data"].shape)
-        print(f"{(timer() - last):.3f} secs for this batch")
-        last = timer()
+    return dataloader
 
-    last = timer()
 
-    time_first_batch = first - start
-    time_per_batch = (last - start) / (batch_idx + 1)
-    time_per_batch_without_first = (last - first) / (batch_idx + 1)
-
-    print(f"{time_first_batch:.3f} secs for the first batch")
-    print(f"{time_per_batch:.3f} secs per batch")
-    print(f"{time_per_batch_without_first:.3f} secs per batch without counting first batch")
-
-    mlflow.log_metric(key="time_per_batch_without_first", value=time_per_batch_without_first, step=0)
-    mlflow.log_metric(key="time_per_batch", value=time_per_batch, step=0)
-    mlflow.log_metric(key="time_first_batch", value=time_first_batch, step=0)
+def benchmark(args):
+    dataloader = get_dataloader(args)
+    benchmarker = Benchmarker(verbose=args.verbose, dataset="tartanair", library="dali")
+    benchmarker.set_dataloader(dataloader)
+    benchmarker.benchmark_tartanair(args)
 
 
 def get_parsed_args():
@@ -158,6 +141,7 @@ def get_parsed_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--benchmark_results_file", default="benchmark_results_tartanair.csv", type=str)
+    parser.add_argument("--verbose", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
     parser.add_argument("--batch_size", type=int, default=64)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--num_threads", type=int, default=os.cpu_count())
@@ -169,24 +153,37 @@ def get_parsed_args():
     parser.add_argument("--initial_fill", type=int, default=100)
     parser.add_argument("--image_dir", type=str, default="/datadrive/localdatasets/tartanair-release1-dali/")
     parser.add_argument("--is_amlt", default="yes", type=lambda x: bool(distutils.util.strtobool(x)))
+    parser.add_argument(
+        "--modalities",
+        default=["image_left"],
+        help="list of modalities (strings)",
+        nargs="+",
+        type=str,
+        choices=[
+            "image_left",
+            "image_right",
+            "depth_left",
+            "depth_right",
+            "flow_mask",
+            "flow_flow",
+            "seg_left",
+            "seg_right",
+        ],
+    )
+    parser.add_argument("--num_workers", default=6, type=int, help="number of cpu cores")
+    parser.add_argument("--seq_len", default=1, type=int, help="number of frames in each video block")
+    # not used
+    parser.add_argument("--num_seq", default=1, type=int, help="number of video blocks")
 
     args = parser.parse_args()
     return args
 
 
-def main():
-    args = get_parsed_args()
-
-    # speedtest_dali_tutorial(
-    #     get_image_rgb_pipeline, batch_size=64, n_threads=num_cpu_cores, device="mixed", prefetch_queue_depth=2
-    # )
-
-    # performance_tuning(args)
-    benchmark_pipeline(args)
+def main(args):
+    benchmark(args)
     visualize_rgb_image_pipeline(args)
-
-    print("\n\n\n")
 
 
 if __name__ == "__main__":
-    main()
+    args = get_parsed_args()
+    main(args)

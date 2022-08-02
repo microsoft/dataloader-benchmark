@@ -1,10 +1,10 @@
 import distutils
 import os
-from timeit import default_timer as timer
 
 import mlflow
 import numpy as np
 import nvidia.dali.fn as fn
+from benchmarker import Benchmarker
 from nvidia.dali import pipeline_def
 from nvidia.dali.plugin.pytorch import DALIGenericIterator
 
@@ -72,11 +72,7 @@ def visualize_seq_pipe(args):
         )
 
 
-def benchmark_pipeline(args):
-    print("\n\n\nbenchmark_pipeline():")
-    start = timer()
-    last = start
-
+def get_dataloader(args):
     pipe = get_frame_seq_pipe(
         seq_path=args.seq_dir,
         sequence_length=args.sequence_length,
@@ -95,30 +91,16 @@ def benchmark_pipeline(args):
         # prefetch_queue_depth={"cpu_size": num_threads, "gpu_size": 1},
     )
 
-    dali_iter = DALIGenericIterator(pipe, ["data"], reader_name="Reader")
+    dataloader = DALIGenericIterator(pipe, ["data"], reader_name="Reader")
 
-    # batch_list is list of length of 1 as we only have a single pipeline
-    for batch_idx, batch_list in enumerate(dali_iter):
-        print(f"batch_idx: {batch_idx:05}")
-        if batch_idx == 0:
-            print(f"batch_list[0]['data'].shape: {batch_list[0]['data'].shape}")
-            first = timer()
-        print(f"{(timer() - last):.3f} secs for this batch")
-        last = timer()
+    return dataloader
 
-    last = timer()
 
-    time_first_batch = first - start
-    time_per_batch = (last - start) / (batch_idx + 1)
-    time_per_batch_without_first = (last - first) / (batch_idx + 1)
-
-    print(f"{time_first_batch:.3f} secs for the first batch")
-    print(f"{time_per_batch:.3f} secs per batch")
-    print(f"{time_per_batch_without_first:.3f} secs per batch without counting first batch")
-
-    mlflow.log_metric(key="time_per_batch_without_first", value=time_per_batch_without_first, step=0)
-    mlflow.log_metric(key="time_per_batch", value=time_per_batch, step=0)
-    mlflow.log_metric(key="time_first_batch", value=time_first_batch, step=0)
+def benchmark(args):
+    dataloader = get_dataloader(args)
+    benchmarker = Benchmarker(verbose=args.verbose, dataset="tartanair", library="dali")
+    benchmarker.set_dataloader(dataloader)
+    benchmarker.benchmark_tartanair(args)
 
 
 def get_parsed_args():
@@ -126,6 +108,7 @@ def get_parsed_args():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--benchmark_results_file", default="benchmark_results_tartanair.csv", type=str)
+    parser.add_argument("--verbose", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
     parser.add_argument("--batch_size", type=int, default=64)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--num_threads", type=int, default=os.cpu_count())
@@ -141,14 +124,35 @@ def get_parsed_args():
     parser.add_argument("--seq_dir", type=str, default="/datadrive/localdatasets/tartanair-release1-dali")
     parser.add_argument("--is_amlt", default="yes", type=lambda x: bool(distutils.util.strtobool(x)))
 
+    parser.add_argument("--seq_len", default=16, type=int, help="number of frames in each video block")
+    parser.add_argument("--num_seq", default=1, type=int, help="number of video blocks")
+    # not used
+    parser.add_argument("--num_workers", default=6, type=int, help="number of cpu cores")
+    parser.add_argument(
+        "--image_left",
+        default=["depth_left"],
+        help="list of modalities (strings)",
+        nargs="+",
+        type=str,
+        choices=[
+            "image_left",
+            "image_right",
+            "depth_left",
+            "depth_right",
+            "flow_mask",
+            "flow_flow",
+            "seg_left",
+            "seg_right",
+        ],
+    )
+
     args = parser.parse_args()
     return args
 
 
 def main():
     args = get_parsed_args()
-
-    benchmark_pipeline(args)
+    benchmark(args)
     visualize_seq_pipe(args)
 
 

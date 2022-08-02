@@ -1,4 +1,5 @@
 import argparse
+import distutils
 
 
 def parse_args():
@@ -21,7 +22,7 @@ def parse_args():
     parser.add_argument("--flip", default=False, type=bool)
     parser.add_argument(
         "--modalities",
-        default=["image_left"],
+        default=["image_left", "depth_left", "flow_flow"],
         help="list of modalities (strings)",
         nargs="+",
         type=str,
@@ -37,6 +38,7 @@ def parse_args():
         ],
     )
 
+    parser.add_argument("--verbose", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
     parser.add_argument("--use_memory", default=False, help="use multimodal fusion memory")
     parser.add_argument("--use_external", default=False, type=bool, help="use memory as external info")
     parser.add_argument("--use_pred", default=False, type=bool, help="use predictive contrastive loss.")
@@ -59,14 +61,14 @@ def parse_args():
     # parser.add_argument('--data_path', default= '../Data/tartanair-release1/')
     parser.add_argument(
         "--train_ann_file",
-        default="/datadrive/commondatasets/tartanair-release1/train_ann_debug.json",
+        default="/datadrive/localdatasets/tartanair-release1/train_ann_debug_ratnesh.json",
         type=str,
     )
     parser.add_argument("--val_ann_file", default=" ", type=str)
     parser.add_argument("--benchmark_results_file", default="benchmark_results_tartanair.csv", type=str)
     parser.add_argument(
         "--train_transform",
-        default="TartanAirVideoTransformWithAugmentation",
+        default="TartanAirVideoTransform",
         type=str,
         choices=["TartanAirVideoTransform", "TartanAirVideoTransformWithAugmentation"],
     )
@@ -75,9 +77,9 @@ def parse_args():
     parser.add_argument("--pin_memory", default=True, type=bool)
     parser.add_argument("--img_dim", default=224, type=int)
     parser.add_argument("--img_crop", default=448, type=int)
-    parser.add_argument("--seq_len", default=1, type=int, help="number of frames in each video block")
-    parser.add_argument("--num_seq", default=16, type=int, help="number of video blocks")
-    parser.add_argument("--num_workers", default=1, type=int, help="number of cpu cores")
+    parser.add_argument("--seq_len", default=16, type=int, help="number of frames in each video block")
+    parser.add_argument("--num_seq", default=1, type=int, help="number of video blocks")
+    parser.add_argument("--num_workers", default=6, type=int, help="number of cpu cores")
 
     args = parser.parse_args()
     return args

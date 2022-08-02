@@ -103,32 +103,8 @@ def get_parallel_callable_pretrain_pipeline(data_dir, variables, debug_print, de
         # dtype=[types.FLOAT],
         # reader_name="Reader",
     )
+    data = data.gpu()
     return data
-
-
-def test_parallel_callable_pretrain_single_batch(args):
-    print("\n\n\ntest_parallel_callable_pretrain_single_batch():")
-    pipe = get_parallel_callable_pretrain_pipeline(
-        data_dir=args.data_dir,
-        variables=args.variables,
-        batch_size=args.batch_size,
-        num_threads=args.num_threads,
-        device_id=args.device_id,
-        debug_print=args.debug_print,
-        debug_print_each_sample=args.debug_print_each_sample,
-        py_num_workers=args.py_num_workers,
-        # random_shuffle=args.random_shuffle,
-        # initial_fill=args.initial_fill,
-        # read_ahead=args.read_ahead,
-        # seed=args.seed,
-    )
-    pipe.build()
-    pipe_out = pipe.run()
-    batch = [np.array(pipe_out[0][sample_idx]) for sample_idx in range(args.batch_size)]
-    for sample_idx, sample in enumerate(batch):
-        print(f"sample {sample_idx:05}, variable {args.variables[0]}, shape: {sample.shape}")
-        # for k in args.variables:
-        # print(f"sample {sample_idx:05}, variable {args.}, shape: {sample[k].shape}")
 
 
 def get_dataloader(args):
@@ -140,43 +116,44 @@ def get_dataloader(args):
         device_id=args.device_id,
         debug_print=args.debug_print,
         debug_print_each_sample=args.debug_print_each_sample,
-        py_num_workers=args.py_num_workers,
+        py_num_workers=args.num_workers,
         # random_shuffle=args.random_shuffle,
         # initial_fill=args.initial_fill,
         # read_ahead=args.read_ahead,
         # seed=args.seed,
     )
 
-    # dali_iter = DALIGenericIterator(pipe, ["data"], reader_name="Reader")
     dataloader = DALIGenericIterator(pipe, ["data"])
     return dataloader
 
 
 def benchmark(args):
     dataloader = get_dataloader(args)
-    benchmarker = Benchmarker()
+    benchmarker = Benchmarker(verbose=args.verbose, dataset=f"climate_{args.use}", library="dali_npy_callable")
     benchmarker.set_dataloader(dataloader)
-    benchmarker.benchmark_climate(args)
+    benchmarker.benchmark_climate_dali(args)
 
 
 def get_parsed_args():
     import argparse
 
     parser = argparse.ArgumentParser()
-
+    parser.add_argument("--verbose", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
     parser.add_argument("--benchmark_results_file", default="benchmark_results_climate.csv", type=str)
+    parser.add_argument("--use", type=str, default="pretrain", help="Use forecast or pretrain")
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--num_threads", type=int, default=6)
-    parser.add_argument("--py_num_workers", type=int, default=1)
+    parser.add_argument("--num_workers", type=int, default=6)
     parser.add_argument(
-        "--device", type=str, default="cpu", choices=["cpu", "gpu"]
+        "--device", type=str, default="gpu", choices=["cpu", "gpu"]
     )  # use gpu for GPUDirect Storage Support. needs cuda>=11.4
     parser.add_argument("--device_id", type=int, default=0)
     parser.add_argument("--img_dim", type=int, default=224)
     parser.add_argument("--random_shuffle", default="yes", type=lambda x: bool(distutils.util.strtobool(x)))
     parser.add_argument("--debug_print", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
     parser.add_argument("--debug_print_each_sample", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
+    parser.add_argument("--verbose", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
     parser.add_argument("--img_crop", type=int, default=448)
     parser.add_argument("--prefetch_queue_depth", type=int, default=12)
     parser.add_argument("--initial_fill", type=int, default=2)
@@ -209,10 +186,7 @@ def get_parsed_args():
 
 
 def main(args):
-    args = get_parsed_args()
     benchmark(args)
-
-    print("\n\n\n")
 
 
 if __name__ == "__main__":

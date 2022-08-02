@@ -35,7 +35,7 @@ def get_dataloader(args):
 
 def benchmark(args):
     dataloader = get_dataloader(args)
-    benchmarker = Benchmarker()
+    benchmarker = Benchmarker(verbose=args.verbose, library="ffcv", dataset="tartanair")
     benchmarker.set_dataloader(dataloader)
     benchmarker.benchmark_tartanair(args)
 
@@ -46,13 +46,24 @@ def get_parsed_args():
 
     parser.add_argument("--dataset", type=str, default="tartanair", help="dataset type to use for benchmarking")
     parser.add_argument(
-        "--beton_file", type=str, default="./tartan_abandonedfactory_ratnesh.beton", help="path to beton file"
+        "--beton_file",
+        type=str,
+        default="/datadrive/localdatasets/tartanair-release1/tartan_abandonedfactory_ratnesh.beton",
+        help="path to beton file",
     )
-    parser.add_argument("--tartanair_ann_file", type=str, default="./train_ann_debug_ratnesh.json", help="")
+    parser.add_argument(
+        "--tartanair_ann_file",
+        type=str,
+        default="/datadrive/localdatasets/tartanair-release1/train_ann_debug_ratnesh.json",
+        help="",
+    )
     parser.add_argument("--order", type=str, default="random", help="Ordering of data: random or quasi_random")
     parser.add_argument("--os_cache", type=lambda x: bool(distutils.util.strtobool(x)))
+    parser.add_argument("--verbose", type=lambda x: bool(distutils.util.strtobool(x)))
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size")
     parser.add_argument("--num_workers", type=int, default=12, help="Number of workers")
+    parser.add_argument("--seq_len", default=16, type=int, help="number of frames in each video block")
+    parser.add_argument("--num_seq", default=1, type=int, help="number of video blocks")
     parser.add_argument(
         "--modalities",
         default=["image_left", "depth_left", "flow_flow"],
@@ -70,6 +81,7 @@ def get_parsed_args():
             "seg_right",
         ],
     )
+    parser.add_argument("--train_transform", default="FFCV", type=str)
 
     args = parser.parse_args()
 

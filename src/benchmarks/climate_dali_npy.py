@@ -1,6 +1,5 @@
 import distutils
 
-import numpy as np
 import nvidia.dali.fn as fn
 from benchmarker import Benchmarker
 from nvidia.dali import pipeline_def
@@ -27,32 +26,9 @@ def get_climate_npy_pretrain_pipeline(data_dir, device):
     return data
 
 
-def test_pipe_npy_single_batch(args):
-    print("\n\n\nget_climate_npy_pretrain_pipeline():")
-    pipe = get_climate_npy_pretrain_pipeline(
-        data_dir=args.data_dir,
-        batch_size=args.batch_size,
-        num_threads=args.num_threads,
-        device=args.device,
-        device_id=args.device_id,
-        # random_shuffle=args.random_shuffle,
-        # initial_fill=args.initial_fill,
-        # read_ahead=args.read_ahead,
-        # seed=args.seed,
-    )
-    pipe.build()
-    pipe_out = pipe.run()
-    batch = [np.array(pipe_out[0][sample_idx]) for sample_idx in range(args.batch_size)]
-    for sample_idx, sample in enumerate(batch):
-        print(
-            f"sample {sample_idx:05}, shape: {sample.shape}"
-            # f"sample {sample_idx:05}, shape: {sample.shape}, sample.min(): {sample.min()}, sample.max(): {sample.max()}, sample.mean(): {sample.mean()}"
-        )
-
-
 def benchmark(args):
     dataloader = get_dataloader(args)
-    benchmarker = Benchmarker()
+    benchmarker = Benchmarker(verbose=args.verbose, dataset=f"climate_{args.use}", library="dali_npy")
     benchmarker.set_dataloader(dataloader)
     benchmarker.benchmark_climate(args)
 
@@ -63,6 +39,7 @@ def get_parsed_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--benchmark_results_file", default="benchmark_results_climate.csv", type=str)
+    parser.add_argument("--verbose", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--num_threads", type=int, default=6)

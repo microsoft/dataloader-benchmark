@@ -29,8 +29,7 @@ def get_dataloader_no_transform(args):
 
 def benchmark(args):
     dataloader = get_dataloader(args)
-
-    benchmarker = Benchmarker()
+    benchmarker = Benchmarker(verbose=args.verbose, library="pytorch", dataset="tartanair")
     benchmarker.set_dataloader(dataloader)
     benchmarker.benchmark_tartanair(args)
 

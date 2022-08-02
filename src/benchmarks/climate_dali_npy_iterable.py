@@ -1,3 +1,4 @@
+import distutils
 import os
 
 # from data.climate.era5_datapipe import ERA5Npy
@@ -35,10 +36,12 @@ class ExternalPretrainInputIterator:
         return batch
 
 
-@pipeline_def
+# todo pass cmd line args to decorater with args
+@pipeline_def(batch_size=batch_size, num_threads=6, device_id=0)
 def get_iterable_pretrain_pipeline(data_dir, variables):
     print("\n\n\nget_iterable_pretrain_pipeline():")
     data = fn.external_source(source=ExternalPretrainInputIterator(data_dir, variables, batch_size_ext=batch_size))
+    data = data.gpu()
     return data
 
 
@@ -49,40 +52,15 @@ def get_dataloader(args):
         batch_size=args.batch_size,
         num_threads=args.num_threads,
         device_id=args.device_id,
-        debug_print=args.debug_print,
-        # random_shuffle=args.random_shuffle,
-        # initial_fill=args.initial_fill,
-        # read_ahead=args.read_ahead,
-        # seed=args.seed,
     )
 
-    dataloader = DALIGenericIterator(pipe, ["data"], reader_name="Reader")
+    dataloader = DALIGenericIterator(pipe, ["data"])
     return dataloader
-
-
-def test_iterable_pretrain_single_batch(args):
-    print("\n\n\ntest_iterable_pretrain_single_batch():")
-    pipe = get_iterable_pretrain_pipeline(
-        data_dir=args.data_dir,
-        variables=args.variables,
-        batch_size=args.batch_size,
-        num_threads=args.num_threads,
-        device_id=args.device_id,
-        # random_shuffle=args.random_shuffle,
-        # initial_fill=args.initial_fill,
-        # read_ahead=args.read_ahead,
-        # seed=args.seed,
-    )
-    pipe.build()
-    pipe_out = pipe.run()
-    batch = [np.array(pipe_out[0][sample_idx]) for sample_idx in range(args.batch_size)]
-    for sample_idx, sample in enumerate(batch):
-        print(f"sample {sample_idx:05}, variable {args.variables[0]}, shape: {sample.shape}")
 
 
 def benchmark(args):
     dataloader = get_dataloader(args)
-    benchmarker = Benchmarker()
+    benchmarker = Benchmarker(verbose=args.verbose, dataset=f"climate_{args.use}", library="dali_npy_iterable")
     benchmarker.set_dataloader(dataloader)
     benchmarker.benchmark_climate(args)
 
@@ -93,12 +71,15 @@ def get_parsed_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--benchmark_results_file", default="benchmark_results_climate.csv", type=str)
+    parser.add_argument("--verbose", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
+    parser.add_argument("--verbose", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
+    parser.add_argument("--use", type=str, default="pretrain", help="Use forecast or pretrain")
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--num_threads", type=int, default=6)
     parser.add_argument("--py_num_workers", type=int, default=1)
     parser.add_argument(
-        "--device", type=str, default="cpu", choices=["cpu", "gpu"]
+        "--device", type=str, default="gpu", choices=["cpu", "gpu"]
     )  # use gpu for GPUDirect Storage Support. needs cuda>=11.4
     parser.add_argument("--device_id", type=int, default=0)
     parser.add_argument("--img_dim", type=int, default=224)
@@ -106,7 +87,7 @@ def get_parsed_args():
     parser.add_argument("--debug_print", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
     parser.add_argument("--debug_print_each_sample", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
     parser.add_argument("--img_crop", type=int, default=448)
-    parser.add_argument("--prefetch_queue_depth", type=int, default=12)
+    parser.add_argument("--prefetch_queue_depth", type=int, default=1)
     parser.add_argument("--initial_fill", type=int, default=2)
     parser.add_argument(
         "--data_dir",
@@ -116,7 +97,6 @@ def get_parsed_args():
         default="/datadrive/localdatasets/climate/1.40625deg_monthly_np/val",
     )
     parser.add_argument("--is_amlt", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
-    parser.add_argument("--read_ahead", default="yes", type=lambda x: bool(distutils.util.strtobool(x)))
     parser.add_argument(
         "--cache_header_information",
         default="yes",
@@ -137,13 +117,9 @@ def get_parsed_args():
 
 
 def main(args):
-    args = get_parsed_args()
-
-    # test_iterable_pretrain_single_batch(args)
-
     benchmark(args)
 
 
 if __name__ == "__main__":
-    args = parse_args()
+    args = get_parsed_args()
     main(args)

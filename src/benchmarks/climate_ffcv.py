@@ -37,14 +37,14 @@ def get_dataloader(args):
 
 def benchmark(args):
     dataloader = get_dataloader(args)
-
-    benchmarker = Benchmarker()
+    benchmarker = Benchmarker(verbose=args.verbose, dataset=f"climate_{args.use}", library="ffcv")
     benchmarker.set_dataloader(dataloader)
     benchmarker.benchmark_tartanair(args)
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description="FFCV options")
+    parser.add_argument("--verbose", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
     parser.add_argument("--benchmark_results_file", default="benchmark_results_climate.csv", type=str)
     parser.add_argument("--beton_file", type=str, help="Dataset to use for benchmarking")
     parser.add_argument("--order", type=str, default="random", help="Ordering of data: random or quasi_random")
