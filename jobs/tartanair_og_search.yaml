@@ -21,21 +21,19 @@ storage:
     container_name: commondatasets
     mount_dir: /mnt/data
     mount_options: ["--file-cache-timeout-in-seconds=0"]
-  custom_output:
+  results:
     storage_account_name: ramadaanaml
-    container_name: mmvmae-benchmark-results
-    # mount_dir: /mnt/custom_output
+    container_name: dataloader-benchmark-results
     is_output: True
 
 search:
   job_template:
-    # name: job_{experiment_name:s}_{auto:10s}
     name: tartanair_{auto:10s}
     sku: G1
     command:
       - python src/benchmarks/tartanair_og.py
         --train_ann_file /mnt/data/tartanair-release1/train_ann_debug_ratnesh.json
-        --benchmark_results_file /mnt/data_output/benchmark_modalities_results_new.csv
+        --benchmark_results_file /mnt/results/tartanair_search.csv
         --batch_size {batch_size}
         --num_workers {num_workers}
         --num_seq {num_seq}

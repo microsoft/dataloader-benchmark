@@ -21,19 +21,18 @@ storage:
     container_name: datasets
     mount_dir: /mnt/data
     mount_options: ["--file-cache-timeout-in-seconds=0"]
-  custom_output:
+  results:
     storage_account_name: ramadaanaml
-    container_name: mmvmae-benchmark-results
-    mount_dir: /mnt/data_output
+    container_name: dataloader-benchmark-results
     is_output: True
 
 search:
   job_template:
-    # name: job_{experiment_name:s}_{auto:10s}
     name: climate_ffcv_{auto:10s}
     sku: G1
     command:
-      - python src/benchmarks/ffcv_climate.py
+      - python src/benchmarks/climate_ffcv.py
+        --benchmark_results_file /mnt/results/climate.csv
         --beton_file /mnt/data/trial/1.40625/{use}/val.beton
         --batch_size {batch_size}
         --num_workers {num_workers}

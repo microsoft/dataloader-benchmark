@@ -10,8 +10,7 @@ import mlflow
 import numpy as np
 import nvidia.dali.fn as fn
 
-# from nvidia.dali import pipeline_def
-from nvidia.dali.pipeline.experimental import pipeline_def
+from nvidia.dali import pipeline_def
 from nvidia.dali.plugin.pytorch import DALIGenericIterator
 
 batch_size = 32

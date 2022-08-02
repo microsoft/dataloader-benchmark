@@ -22,10 +22,9 @@ storage:
     container_name: commondatasets
     mount_dir: /mnt/data
     mount_options: ["--file-cache-timeout-in-seconds=0"]
-  custom_output:
+  results:
     storage_account_name: ramadaanaml
-    container_name: mmvmae-benchmark-results
-    mount_dir: /mnt/data_output
+    container_name: dataloader-benchmark-results
     is_output: True
 
 jobs:
@@ -35,6 +34,7 @@ jobs:
       - export MKL_THREADING_LAYER="GNU"
       - python src/system_monitor.py --watch_every_n_seconds 1 &
       - python src/benchmarks/tartanair_dali.py
+        --benchmark_results_file /mnt/results/tartanair.csv
         --batch_size 64
         --image_dir /mnt/data/tartanair-release1-dali/abandonedfactory/Easy/P000/
         --is_amlt yes
@@ -49,6 +49,7 @@ jobs:
       - export MKL_THREADING_LAYER="GNU"
       - python src/system_monitor.py --watch_every_n_seconds 1 &
       - python src/benchmarks/tartanair_dali_sequence.py
+        --benchmark_results_file /mnt/results/tartanair.csv
         --batch_size 64
         --sequence_length 16
         --seq_dir /mnt/data/tartanair-release1-dali/abandonedfactory/Easy/P000/sequence_dali
@@ -64,6 +65,7 @@ jobs:
       - export MKL_THREADING_LAYER="GNU"
       - python src/system_monitor.py --watch_every_n_seconds 1 &
       - python src/benchmarks/tartanair_dali_npy.py
+        --benchmark_results_file /mnt/results/tartanair.csv
         --batch_size 64
         --is_amlt yes
         --image_dir /mnt/data/tartanair-release1/abandonedfactory/Easy/P000/depth_left/
@@ -77,6 +79,7 @@ jobs:
   #   command:
   #     - python src/benchmarks/azure_monitor.py &
   #     - python src/benchmarks/tartanair_dali.py
+  #       --benchmark_results_file /mnt/results/tartanair.csv
   #       --batch_size 64
   #       --image_dir /mnt/data/tartanair-release1-dali/abandonedfactory/Easy/P000/
   #       --is_amlt yes
@@ -90,6 +93,7 @@ jobs:
   #   command:
   #     - python src/benchmarks/azure_monitor.py &
   #     - python src/benchmarks/tartanair_dali_npy.py
+  #       --benchmark_results_file /mnt/results/tartanair.csv
   #       --batch_size 64
   #       --is_amlt yes
   #       --image_dir /mnt/data/tartanair-release1-dali/abandonedfactory/Easy/P000/depth_left/

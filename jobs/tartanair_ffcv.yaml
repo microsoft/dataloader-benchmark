@@ -22,22 +22,21 @@ storage:
     container_name: commondatasets
     mount_dir: /mnt/data
     mount_options: ["--file-cache-timeout-in-seconds=0"]
-  custom_output:
+  results:
     storage_account_name: ramadaanaml
-    container_name: mmvmae-benchmark-results
-    mount_dir: /mnt/data_output
+    container_name: dataloader-benchmark-results
     is_output: True
 
 search:
   job_template:
-    # name: job_{experiment_name:s}_{auto:10s}
     name: tartanair_ffcv_modalities_image_left_depth_left_flow_flow_seq_len_1_{auto:10s}
     sku: G1
     command:
       - export MKL_THREADING_LAYER="GNU"
       - python src/system_monitor.py --watch_every_n_seconds 1 &
-      - python src/benchmarks/compare_pytorch_ffcv.py
+      - python src/benchmarks/tartanair_ffcv.py
         --dataset tartanair
+        --benchmark_results_file /mnt/results/tartanair.csv
         --beton_file /mnt/data/tartanair-release1/tartan_abandonedfactory_ratnesh.beton
         --tartanair_ann_file /mnt/data/tartanair-release1/train_ann_debug_ratnesh.json
         --batch_size 64

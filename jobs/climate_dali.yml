@@ -22,10 +22,9 @@ storage:
     container_name: datasets
     mount_dir: /mnt/data
     mount_options: ["--file-cache-timeout-in-seconds=0"]
-  custom_output:
+  results:
     storage_account_name: ramadaanaml
-    container_name: mmvmae-benchmark-results
-    mount_dir: /mnt/data_output
+    container_name: dataloader-benchmark-results
     is_output: True
 
 jobs:
@@ -35,6 +34,7 @@ jobs:
       - export MKL_THREADING_LAYER="GNU"
       - python src/system_monitor.py --watch_every_n_seconds 1 &
       - python src/benchmarks/climate_dali_npy.py
+        --benchmark_results_file /mnt/results/climate.csv
         --batch_size 32
         --data_dir /mnt/data/1.40625deg_monthly_np/train
         --initial_fill 100
@@ -50,6 +50,7 @@ jobs:
       - export MKL_THREADING_LAYER="GNU"
       - python src/system_monitor.py --watch_every_n_seconds 1 &
       - python src/benchmarks/climate_dali_npy.py
+        --benchmark_results_file /mnt/results/climate.csv
         --batch_size 32
         --data_dir /mnt/data/1.40625deg_monthly_np/val
         --num_threads 2
@@ -69,6 +70,7 @@ jobs:
       - export MKL_THREADING_LAYER="GNU"
       - python src/system_monitor.py --watch_every_n_seconds 1 &
       - python src/benchmarks/climate_dali_npy_sharded.py
+        --benchmark_results_file /mnt/results/climate.csv
         --batch_size 32
         --data_dir /mnt/data/1.40625deg_monthly_np/val
         --num_threads 2
