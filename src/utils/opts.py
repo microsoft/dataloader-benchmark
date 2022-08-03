@@ -4,7 +4,7 @@ import distutils
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--batch_size", type=int, default=16)
+    parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--print_freq", type=int, default=100)
     parser.add_argument("--save_freq", type=int, default=100)

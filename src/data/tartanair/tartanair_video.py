@@ -173,7 +173,10 @@ class TartanAirVideoDataset(data.Dataset):
                 else:
                     raise ValueError()
 
-                item[modality].append(data)
+                if self.is_write_to_ffcv_beton:
+                    item[modality] = data
+                else:
+                    item[modality].append(data)
 
         if self.is_write_to_ffcv_beton:
             for modality in item:
