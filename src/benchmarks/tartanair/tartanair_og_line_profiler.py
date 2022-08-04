@@ -1,5 +1,7 @@
+from tartanair_ops import get_tartanair_args
+
+from src.benchmarks.common_opts import get_common_args
 from src.data.tartanair import build_loader
-from src.utils.opts import parse_args
 
 
 def get_dataloader(args):
@@ -45,6 +47,8 @@ def cprofile(args):
 
 
 if __name__ == "__main__":
-    args = parse_args()
+    args = get_common_args()
+    args_tartanair = get_tartanair_args()
+    args.__dict__.update(args_tartanair.__dict__)
     main(args)
     cprofile(args)

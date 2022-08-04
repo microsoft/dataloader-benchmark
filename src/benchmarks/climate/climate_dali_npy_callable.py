@@ -1,5 +1,5 @@
-import distutils
 import os
+from distutils.util import strtobool
 
 # from data.climate.era5_datapipe import ERA5Npy
 from random import shuffle
@@ -7,9 +7,12 @@ from timeit import default_timer as timer
 
 import numpy as np
 import nvidia.dali.fn as fn
-from benchmarker import Benchmarker
+from climate_ops import get_climate_args
 from nvidia.dali import pipeline_def
 from nvidia.dali.plugin.pytorch import DALIGenericIterator
+
+from src.benchmarks.benchmarker import Benchmarker
+from src.benchmarks.common_opts import get_common_args
 
 batch_size = 32
 
@@ -134,14 +137,10 @@ def benchmark(args):
     benchmarker.benchmark_climate_dali(args)
 
 
-def get_parsed_args():
+def get_dali_args():
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--verbose", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
-    parser.add_argument("--benchmark_results_file", default="benchmark_results_climate.csv", type=str)
-    parser.add_argument("--use", type=str, default="pretrain", help="Use forecast or pretrain")
-    parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--num_threads", type=int, default=6)
     parser.add_argument("--num_workers", type=int, default=6)
@@ -149,36 +148,20 @@ def get_parsed_args():
         "--device", type=str, default="gpu", choices=["cpu", "gpu"]
     )  # use gpu for GPUDirect Storage Support. needs cuda>=11.4
     parser.add_argument("--device_id", type=int, default=0)
-    parser.add_argument("--img_dim", type=int, default=224)
-    parser.add_argument("--random_shuffle", default="yes", type=lambda x: bool(distutils.util.strtobool(x)))
-    parser.add_argument("--debug_print", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
-    parser.add_argument("--debug_print_each_sample", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
-    parser.add_argument("--verbose", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
-    parser.add_argument("--img_crop", type=int, default=448)
+    parser.add_argument("--random_shuffle", default="yes", type=lambda x: bool(strtobool(x)))
+    parser.add_argument("--debug_print", default="no", type=lambda x: bool(strtobool(x)))
+    parser.add_argument("--debug_print_each_sample", default="no", type=lambda x: bool(strtobool(x)))
+    parser.add_argument("--verbose", default="no", type=lambda x: bool(strtobool(x)))
     parser.add_argument("--prefetch_queue_depth", type=int, default=12)
     parser.add_argument("--initial_fill", type=int, default=2)
-    parser.add_argument(
-        "--data_dir",
-        type=str,
-        # default="/datadrive/weatherstorage2datasets/1.40625deg_monthly_np/val",
-        # default="/datadrive/localdatasets/climate/1.40625deg_monthly_npy/val/pretrain/",
-        default="/datadrive/localdatasets/climate/1.40625deg_monthly_np/val",
-    )
-    parser.add_argument("--is_amlt", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
-    parser.add_argument("--read_ahead", default="yes", type=lambda x: bool(distutils.util.strtobool(x)))
+
+    parser.add_argument("--is_amlt", default="no", type=lambda x: bool(strtobool(x)))
+    parser.add_argument("--read_ahead", default="yes", type=lambda x: bool(strtobool(x)))
     parser.add_argument(
         "--cache_header_information",
         default="yes",
-        type=lambda x: bool(distutils.util.strtobool(x)),
+        type=lambda x: bool(strtobool(x)),
         help="If set to True, the header information for each file is cached, improving access speed.",
-    )
-    parser.add_argument(
-        "--variables",
-        default=["z", "r", "u", "v", "t", "t2m", "u10", "v10"],
-        help="list of ___ (strings)",
-        nargs="+",
-        type=str,
-        choices=["z", "r", "u", "v", "t", "t2m", "u10", "v10"],
     )
 
     args = parser.parse_args()
@@ -190,5 +173,11 @@ def main(args):
 
 
 if __name__ == "__main__":
-    args = get_parsed_args()
+    args = get_common_args()
+    climate_args = get_climate_args()
+    dali_args = get_dali_args()
+
+    args.__dict__.update(climate_args.__dict__)
+    args.__dict__.update(dali_args.__dict__)
+
     main(args)

@@ -15,9 +15,8 @@ from timm.data import create_transform
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from torchvision import transforms
 
-from src.utils.utils import ResizeFlowNP
-
 from .tartanair_video import TartanAirVideoDataset
+from .utils import ResizeFlowNP
 
 try:
     from torchvision.transforms import InterpolationMode
@@ -57,7 +56,7 @@ def build_loader(args):
     if not args.use_val:
         return dataset_train, None, data_loader_train, None, None
 
-    dataset_val, _ = build_dataset(is_train=False, config=config)
+    dataset_val, _ = build_dataset(is_train=False, args=args)
     # print(f"local rank {config.LOCAL_RANK} / global rank {dist.get_rank()} successfully build val dataset")
 
     if config.DATA.VAL_DATA_LOADER == "default":
@@ -216,6 +215,8 @@ def build_tartanair_video_transform(is_train, args):
                 resize_size=args.img_dim,
                 modalities=args.modalities,
             )
+        elif args.train_transform == "TartanAirNoTransform":
+            return TartanAirNoTransform()
         else:
             raise ValueError()
     else:
@@ -225,6 +226,8 @@ def build_tartanair_video_transform(is_train, args):
                 resize_size=args.img_dim,
                 modalities=args.modalities,
             )
+        elif args.train_transform == "TartanAirNoTransform":
+            return TartanAirNoTransform()
         else:
             raise ValueError()
 

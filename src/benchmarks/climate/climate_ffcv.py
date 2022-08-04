@@ -1,11 +1,14 @@
 import argparse
-import distutils
+from distutils.util import strtobool
 
-from benchmarker import Benchmarker
+from climate_ops import get_climate_args
 from ffcv.fields.decoders import NDArrayDecoder
 from ffcv.loader import Loader
 from ffcv.transforms import ToTensor
 from utils_ffcv import get_order_option
+
+from src.benchmarks.benchmarker import Benchmarker
+from src.benchmarks.common_opts import get_common_args
 
 
 def get_dataloader(args):
@@ -42,16 +45,11 @@ def benchmark(args):
     benchmarker.benchmark_tartanair(args)
 
 
-def parse_args():
+def get_ffcv():
     parser = argparse.ArgumentParser(description="FFCV options")
-    parser.add_argument("--verbose", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
-    parser.add_argument("--benchmark_results_file", default="benchmark_results_climate.csv", type=str)
     parser.add_argument("--beton_file", type=str, help="Dataset to use for benchmarking")
     parser.add_argument("--order", type=str, default="random", help="Ordering of data: random or quasi_random")
-    parser.add_argument("--os_cache", type=lambda x: bool(distutils.util.strtobool(x)))
-    parser.add_argument("--batch_size", type=int, default=32, help="Batch size")
-    parser.add_argument("--num_workers", type=int, default=1, help="Number of workers")
-    parser.add_argument("--use", type=str, default="forecast", help="Use forecast or pretrain")
+    parser.add_argument("--os_cache", type=lambda x: bool(strtobool(x)))
     args = parser.parse_args()
 
     return args
@@ -62,5 +60,11 @@ def main(args):
 
 
 if __name__ == "__main__":
-    args = parse_args()
+    args = get_common_args()
+    climate_args = get_climate_args()
+    ffcv_args = get_ffcv()
+
+    args.__dict__.update(climate_args.__dict__)
+    args.__dict__.update(ffcv_args.__dict__)
+
     main(args)

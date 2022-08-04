@@ -1,12 +1,15 @@
 import argparse
-import distutils
+from distutils.util import strtobool
 
-from benchmarker import Benchmarker
 from ffcv.fields.decoders import NDArrayDecoder
 from ffcv.loader import Loader
 from ffcv.pipeline.compiler import Compiler
 from ffcv.transforms import ToTensor
+from mushr_ops import get_mushr_args
 from utils_ffcv import get_order_option
+
+from src.benchmarks.benchmarker import Benchmarker
+from src.benchmarks.common_opts import get_common_args
 
 Compiler.set_enabled(True)
 
@@ -38,31 +41,29 @@ def benchmark(args):
     benchmarker.benchmark_mushr(args)
 
 
-def main(args):
-    benchmark(args)
+def get_custom_args():
+    parser = argparse.ArgumentParser(description="")
 
-
-def get_parsed_args():
-    parser = argparse.ArgumentParser(description="FFCV options")
-    parser.add_argument("--verbose", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
-    parser.add_argument("--benchmark_results_file", default="benchmark_results_mushr.csv", type=str)
-    parser.add_argument("--dataset", type=str, default="mushr", help="dataset type to use for benchmarking")
     parser.add_argument(
         "--beton_file", type=str, default="./tartan_abandonedfactory_ratnesh.beton", help="path to beton file"
     )
-    parser.add_argument("--mushr_ann_file", type=str, default="./train_ann_pose.json", help="")
-    parser.add_argument("--mushr_gt_map_file_name", type=str, default="bravern_floor.pgm", help="")
-    parser.add_argument("--mushr_dir", type=str, default="./pretraining_data/hackathon_data_2p5_nonoise3", help="")
-    parser.add_argument("--order", type=str, default="random", help="Ordering of data: random or quasi_random")
-    parser.add_argument("--os_cache", type=lambda x: bool(distutils.util.strtobool(x)))
-    parser.add_argument("--batch_size", type=int, default=32, help="Batch size")
-    parser.add_argument("--num_workers", type=int, default=12, help="Number of workers")
+    parser.add_argument("--os_cache", type=lambda x: bool(strtobool(x)))
 
     args = parser.parse_args()
 
     return args
 
 
+def main(args):
+    benchmark(args)
+
+
 if __name__ == "__main__":
-    args = get_parsed_args()
+    args = get_common_args()
+    mushr_args = get_mushr_args()
+    custom_args = get_custom_args()
+
+    args.__dict__.update(mushr_args.__dict__)
+    args.__dict__.update(custom_args.__dict__)
+
     main(args)

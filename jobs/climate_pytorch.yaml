@@ -59,6 +59,6 @@ search:
       spec: discrete
       values:
         [
-          "--dataset npy --datapath /mnt/data/1.40625deg_yearly_np/val",
-          "--dataset zarr --datapath /mnt/data/1.40625deg_yearly/val",
+          "--dataset_type npy --data_dir /mnt/data/1.40625deg_yearly_np/val",
+          "--dataset_type zarr --data_dir /mnt/data/1.40625deg_yearly/val",
         ]
