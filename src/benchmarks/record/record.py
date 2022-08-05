@@ -5,17 +5,16 @@ import collections
 import io
 import json
 import os
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
 import torch.utils.data as data
 from PIL import Image
 
-from .zipreader import ZipReader, is_zip_path
+from zipreader import ZipReader, is_zip_path
 
 SIZE_UINT = 8  # bytes
-ENDIAN = "little"
 SUBFOLDER_NAME = "records"
 
 CHUNK_SIZE = 1e8
@@ -24,32 +23,45 @@ CHUNK_SIZE = 1e8
 
 # todo: test speed difference between os and python level file operation
 
-
-def int2bytes(num: int) -> bytes:
-    """Transform a python integer to its bytes representation
-
-    Args:
-        num (int): the integer to be transformed
-
-    Returns:
-        bytes: bytes representation of num
-    """
-    return num.to_bytes(length=SIZE_UINT, byteorder=ENDIAN, signed=False)
-
-
 class Record:
     """A protocal that stores each frame data from each sequence, i.e., data item (that consists of multilple modalities)."""
 
     def __init__(self, rootdir: str, features: List[str]) -> None:
-        self.features : List[str] = features + ["seq_start"]  # seq_start marks if the frame is the beginning of a new sequence
+        self.features : List[str] = features  # seq_start marks if the frame is the beginning of a new sequence
         self.rootdir: str = os.path.join(rootdir, SUBFOLDER_NAME)  # store data in a separate directory
+        os.makedirs(self.rootdir, exist_ok=True)
+        self.byte_count: int = 0                         # track number of bytes written into current record file
+        self.recordfile_idx :int = 0                     # number of record file created
+        self._recordfile_endpoints: List[list] = [[0]]   # track the idx of endpoints where the corresponding record file end
+                                                         # [[start_idx, end_idx)]
+        self.recordfile_desc: Optional[int] = None 
 
-        self.byte_count: int = 0
-        self.recordfile_count :int = 0
-        self.recordfile_desc: int = os.open(os.path.join(self.rootdir, f"records_{self.recordfile_count}"), os.O_WRONLY)
-
-        self.idx2recordproto: List[dict] = []
+        self.idx2recordproto: Dict[str, dict] = {}       # proto info of each data item
         self.idx: int = 0
+
+    @property
+    def recordfile_endpoints(self):
+        return self._recordfile_endpoints 
+
+    def recordfile_idx_to_path(self, recordfile_idx:int)->str:
+        """Return path to record file given the idx of the record file.
+
+        Args:
+            recordfile_idx (int): idx of the record file
+
+        Returns:
+            str: path to record file 
+        """
+        return os.path.join(self.rootdir, f"records_{recordfile_idx}.bin")
+
+    @property
+    def get_recordfiles(self) -> List[str]:
+        """Return a list of paths of record files
+
+        Returns:
+            List[str]: list of paths to record files
+        """
+        return [self.recordfile_idx_to_path(i) for i in range(self.recordfile_idx)]
 
     def decode_item(self, recordfile_desc: io.BufferedReader, itemproto: Dict[str, Union[int, dict]]) -> Dict[str, np.ndarray]:
         """Given a record file descript and proto of a single data item, return the
@@ -82,9 +94,10 @@ class Record:
             item (Dict[str, np.ndarray]): feature to data (np.ndarray)
             is_start (bool): denote if the item is the beginning of a sequence
         """
+        if is_seq_start:self.seq_start()
         # get file name and start position for item
         self.idx2recordproto[self.idx] = {
-            "recordfile_idx": self.recordfile_count,
+            "recordfile_idx": self.recordfile_idx,
             "item_offset": os.lseek(self.recordfile_desc, 0, os.SEEK_CUR),
             "is_seq_start": is_seq_start,
         }
@@ -105,23 +118,41 @@ class Record:
         buffer.close()
         return
 
-    def seq_ended(self) -> None:
-        """Notify the record that a complete sequence has been written, let the record
+    def seq_start(self) -> None:
+        """Notify the record that a new sequence is being written, let the record
         decide if we need a new record file to write into.
+        Two cases we need to open new file:
+            1. we currently do now have files to write into
+            2. current file size is big enough (larger than CHUNK_SIZE)
         """
         if self.byte_count > CHUNK_SIZE:
             # current record file big enough
             self.byte_count = 0
-            self.recordfile_count += 1
+            self.recordfile_idx += 1
+            self._recordfile_endpoints[-1].append(self.idx)
+            self._recordfile_endpoints.append([self.idx])
             os.close(self.recordfile_desc)
-            self.recordfile_desc = os.open(os.path.join(self.rootdir, f"records_{self.recordfile_count}.bin"), flags=os.O_WRONLY)
+            self.recordfile_desc = os.open(self.recordfile_idx_to_path(self.recordfile_idx), flags=os.O_WRONLY|os.O_CREAT)
+        elif self.recordfile_desc == None:
+            # no opened file to write into
+            self.recordfile_desc = os.open(self.recordfile_idx_to_path(self.recordfile_idx), flags=os.O_WRONLY|os.O_CREAT)
+
+    def decode_record(self) -> Generator[Dict[str, np.ndarray], None, None]:
+        """Decode the record sequentially, each time retuning a dict that contains the data.
+        """
+        for i in range(self.recordfile_idx):
+            recordfile_path = self.recordfile_idx_to_path(i)
+            endpoints = self.recordfile_endpoints[i]
+            with open(recordfile_path, mode="rb") as f:
+                for idx in range(endpoints[0], endpoints[1]):
+                    yield self.decode_item(f, self.idx2recordproto[idx])
 
     def save_metainfo(self, path):
         pass
 
     def idx4segment(self, segment_len: int, sub_features: List[str]) -> List[dict]:
         """Generate a new index mapping for dataset with: segment_len, sub_features.
-        Only call this function when record has scanned all data, and record has valid attributes: rootdir, recordfile_count
+        Only call this function when record has scanned all data, and record has valid attributes: rootdir,recordfile_idx 
         # todo unit test me!
         Args:
             segment_len (int): length of segment we are reading ! ASSUMING segment_len > 1
@@ -159,7 +190,7 @@ class Record:
         q_has_seg_tail = False  # indicates if the elements in queue are tail of some segment
         for i in range(self.idx):
             itemproto = self.idx2recordproto[i]
-            if (not has_sub_features(itemproto)) or (itemproto["seq_start"]):
+            if (not has_sub_features(itemproto)) or (itemproto["is_seq_start"]):
                 # new seq start
                 while q:
                     if q_has_seg_tail:
@@ -185,7 +216,8 @@ class Record:
         return idx4segment
 
     def close(self):
-        """Close opened file descriptor"""
+        """Close opened file descriptor! This needs to be called when the dataset is scanned over."""
+        self.recordfile_endpoints[-1].append(self.idx)
         os.close(self.recordfile_desc)
 
 
@@ -264,7 +296,6 @@ def encode_tartanAIR(rootdir: str, json_filename: str) -> None:
             item = read_tartanair_features(rootdir, video[i], features)
             record.encode_item(item, (i == 0))
         # notify the record that a complete video sequence is read
-        record.seq_ended()
     record.close()
 
 
