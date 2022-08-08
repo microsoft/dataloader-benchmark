@@ -18,7 +18,7 @@ class Test_Record(unittest.TestCase):
                 record.encode_item(item, True)
             else:
                 record.encode_item(item, False)
-        record.close()
+        record.close_recordfile()
         # decode dataset
         for i, item in enumerate(record.decode_record()):
             for feature in features:
@@ -35,7 +35,7 @@ class Test_Record(unittest.TestCase):
                 record.encode_item(item, True)
             else:
                 record.encode_item(item, False)
-        record.close()
+        record.close_recordfile()
 
         # segment len =2, sequence len =4, full features
         seg_len = 2
@@ -98,15 +98,15 @@ class Test_Record(unittest.TestCase):
                 record.encode_item(item, True)
             else:
                 record.encode_item(item, False)
-        record.close()
+        record.close_recordfile()
 
         seg_len = 3
         idx4segment = record.idx4segment(segment_len=seg_len)
         self.assertEqual(len(idx4segment), 6)
-        ids = [item["idx"] for item in idx4segment]
+        ids = [item["item_idx"] for item in idx4segment]
         self.assertListEqual(ids, [0, 1, 2, 5, 6, 7])
         for i, item in enumerate(idx4segment):
-            if item["idx"] in [0, 5]:
+            if item["item_idx"] in [0, 5]:
                 self.assertTrue(item["is_seg_start"])
             else:
                 self.assertFalse(item["is_seg_start"])
@@ -114,10 +114,10 @@ class Test_Record(unittest.TestCase):
         seg_len = 3
         idx4segment = record.idx4segment(segment_len=seg_len, sub_features=["ceo"])
         self.assertEqual(len(idx4segment), 6)
-        ids = [item["idx"] for item in idx4segment]
+        ids = [item["item_idx"] for item in idx4segment]
         self.assertListEqual(ids, [0, 1, 2, 5, 6, 7])
         for i, item in enumerate(idx4segment):
-            if item["idx"] in [0, 5]:
+            if item["item_idx"] in [0, 5]:
                 self.assertTrue(item["is_seg_start"])
             else:
                 self.assertFalse(item["is_seg_start"])
@@ -126,10 +126,10 @@ class Test_Record(unittest.TestCase):
 
         idx4segment = record.idx4segment(segment_len=seg_len, sub_features=["l5", "l1"])
         self.assertEqual(len(idx4segment), 8)
-        ids = [item["idx"] for item in idx4segment]
+        ids = [item["item_idx"] for item in idx4segment]
         self.assertListEqual(ids, [0, 1, 2, 3, 4, 5, 6, 7])
         for i, item in enumerate(idx4segment):
-            if item["idx"] in [0, 1, 4, 5]:
+            if item["item_idx"] in [0, 1, 4, 5]:
                 self.assertTrue(item["is_seg_start"])
             else:
                 self.assertFalse(item["is_seg_start"])
@@ -144,15 +144,15 @@ class Test_Record(unittest.TestCase):
                 record.encode_item(item, True)
             else:
                 record.encode_item(item, False)
-        record.close()
+        record.close_recordfile()
 
         seg_len = 3
         idx4segment = record.idx4segment(segment_len=seg_len)
         self.assertEqual(len(idx4segment), 3)
-        ids = [item["idx"] for item in idx4segment]
+        ids = [item["item_idx"] for item in idx4segment]
         self.assertListEqual(ids, [0, 1, 2])
         for i, item in enumerate(idx4segment):
-            if item["idx"] in [0, 5]:
+            if item["item_idx"] in [0, 5]:
                 self.assertTrue(item["is_seg_start"])
             else:
                 self.assertFalse(item["is_seg_start"])
@@ -167,7 +167,7 @@ class Test_Record(unittest.TestCase):
                 record.encode_item(item, True)
             else:
                 record.encode_item(item, False)
-        record.close()
+        record.close_recordfile()
 
         seg_len = 3
         idx4segment = record.idx4segment(segment_len=seg_len)
