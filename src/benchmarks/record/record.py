@@ -10,6 +10,7 @@ from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 import numpy as np
 import torch.utils.data as data
 from PIL import Image
+from tqdm import tqdm
 
 from zipreader import ZipReader, is_zip_path
 
@@ -17,6 +18,8 @@ SUBFOLDER_NAME = "records"  # subfolder name to stored serialized record data
 MAX_RECORDFILE_SIZE = 1e8  # 100 mb, maximum size of a single record file
 
 # todo: test speed difference between os and python level file operation
+# frame 0, optical flow offset
+# pre transform
 
 
 class Record:
@@ -250,12 +253,16 @@ def read_tartanair_features(rootdir: str, video_frame: Dict[str, str], features:
         if feature not in video_frame:
             item[feature] = np.array(None)
             continue
-        rel_path = video_frame[f"{feature}_rel_path"].strip()
+        rel_path = video_frame[feature].strip()
+        # this is only a temporary fix that only works for linux
+        rel_path = "/".join(rel_path.split("/")[1:])
         path = os.path.join(rootdir, rel_path)
         # print('root, rel_path', self.root, rel_path)
         ext = os.path.splitext(os.path.basename(path))[1].lower()
         if ext in [".jpg", ".jpeg", ".png", ".ppm", ".bmp", ".pgm", ".tif"]:
             data = zipped_pil_loader(path)
+            # ! added as a temporary fix, need to check if this results in array as expected
+            data = np.asarray(data)
         elif ext in [".npy"]:
             data = zipped_numpy_loader(path)
         else:
@@ -264,7 +271,7 @@ def read_tartanair_features(rootdir: str, video_frame: Dict[str, str], features:
     return item
 
 
-def encode_tartanAIR(rootdir: str, json_filename: str) -> None:
+def encode_tartanAIR(rootdir: str, json_filepath: str) -> None:
     """Given the json config, and the original data of tartanAIR, generate binary chunk file and index files.
     Format:
         {
@@ -285,7 +292,6 @@ def encode_tartanAIR(rootdir: str, json_filename: str) -> None:
     """
     # this should include all potential attributes we intent to read
     features = [
-        "frame_id",
         "image_left_rel_path",
         "depth_left_rel_path",
         "seg_left_rel_path",
@@ -293,12 +299,11 @@ def encode_tartanAIR(rootdir: str, json_filename: str) -> None:
         "flow_mask_rel_path",
     ]
     record = Record(rootdir=rootdir, features=features)
-    json_path = os.path.join(rootdir, json_filename)
-    with open(json_path, "r") as f:
+    with open(json_filepath, "r") as f:
         tartan_config = json.load(f)
     assert tartan_config["type"] == "video_pretrain"
 
-    for video_name in tartan_config["ann"]:
+    for video_name in tqdm(tartan_config["ann"]):
         video = tartan_config["ann"][video_name]
         for i in range(len(video)):
             # only use the clips that all used data types are avaliable in each frame
@@ -336,3 +341,12 @@ def zipped_numpy_loader(path):
         with open(path, "rb") as f:
             x = np.load(f)
     return x
+
+
+if __name__ == "__main__":
+    config_path = "./tartanair.yaml"
+    import yaml
+
+    with open(config_path, mode="r") as f:
+        config = yaml.safe_load(f.read())
+    encode_tartanAIR(config["rootdir"], config["json_filepath"])

@@ -1,4 +1,4 @@
-"""A TFRecord style dataloader (both iterative and map style provide)
+"""A TFRecord style dataloader for TartanAIR dataset (both iterative and map style provide)
 """
 
 
