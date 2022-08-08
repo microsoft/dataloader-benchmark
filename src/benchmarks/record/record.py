@@ -23,34 +23,37 @@ CHUNK_SIZE = 1e8
 
 # todo: test speed difference between os and python level file operation
 
+
 class Record:
     """A protocal that stores each frame data from each sequence, i.e., data item (that consists of multilple modalities)."""
 
     def __init__(self, rootdir: str, features: List[str]) -> None:
-        self.features : List[str] = features  # seq_start marks if the frame is the beginning of a new sequence
+        self.features: List[str] = features  # seq_start marks if the frame is the beginning of a new sequence
         self.rootdir: str = os.path.join(rootdir, SUBFOLDER_NAME)  # store data in a separate directory
         os.makedirs(self.rootdir, exist_ok=True)
-        self.byte_count: int = 0                         # track number of bytes written into current record file
-        self.recordfile_idx :int = 0                     # number of record file created
-        self._recordfile_endpoints: List[list] = [[0]]   # track the idx of endpoints where the corresponding record file end
-                                                         # [[start_idx, end_idx)]
-        self.recordfile_desc: Optional[int] = None 
+        self.byte_count: int = 0  # track number of bytes written into current record file
+        self.recordfile_idx: int = 0  # number of record file created
+        self._recordfile_endpoints: List[list] = [
+            [0]
+        ]  # track the idx of endpoints where the corresponding record file end
+        # [[start_idx, end_idx)]
+        self.recordfile_desc: Optional[int] = None
 
-        self.idx2recordproto: Dict[str, dict] = {}       # proto info of each data item
+        self.idx2recordproto: Dict[str, dict] = {}  # proto info of each data item
         self.idx: int = 0
 
     @property
     def recordfile_endpoints(self):
-        return self._recordfile_endpoints 
+        return self._recordfile_endpoints
 
-    def recordfile_idx_to_path(self, recordfile_idx:int)->str:
+    def recordfile_idx_to_path(self, recordfile_idx: int) -> str:
         """Return path to record file given the idx of the record file.
 
         Args:
             recordfile_idx (int): idx of the record file
 
         Returns:
-            str: path to record file 
+            str: path to record file
         """
         return os.path.join(self.rootdir, f"records_{recordfile_idx}.bin")
 
@@ -63,9 +66,11 @@ class Record:
         """
         return [self.recordfile_idx_to_path(i) for i in range(self.recordfile_idx)]
 
-    def decode_item(self, recordfile_desc: io.BufferedReader, itemproto: Dict[str, Union[int, dict]]) -> Dict[str, np.ndarray]:
+    def decode_item(
+        self, recordfile_desc: io.BufferedReader, itemproto: Dict[str, Union[int, dict]]
+    ) -> Dict[str, np.ndarray]:
         """Given a record file descript and proto of a single data item, return the
-        decoded dictionary that contains feature->data of the item.
+        decoded dictionary that maps feature->data of the item.
 
         Args:
             recordfile_desc (io.BufferedReader): python file object of the chunk file
@@ -94,7 +99,8 @@ class Record:
             item (Dict[str, np.ndarray]): feature to data (np.ndarray)
             is_start (bool): denote if the item is the beginning of a sequence
         """
-        if is_seq_start:self.seq_start()
+        if is_seq_start:
+            self.seq_start()
         # get file name and start position for item
         self.idx2recordproto[self.idx] = {
             "recordfile_idx": self.recordfile_idx,
@@ -106,6 +112,7 @@ class Record:
             data = item[feature]
             buffer.write(data.tobytes())
             self.idx2recordproto[self.idx][feature] = {
+                "is_none": (data.dtype == np.dtype("O") and data == None),
                 "dtype": data.dtype,
                 "shape": data.shape,
                 "feature_offset": buffer.tell(),
@@ -132,14 +139,17 @@ class Record:
             self._recordfile_endpoints[-1].append(self.idx)
             self._recordfile_endpoints.append([self.idx])
             os.close(self.recordfile_desc)
-            self.recordfile_desc = os.open(self.recordfile_idx_to_path(self.recordfile_idx), flags=os.O_WRONLY|os.O_CREAT)
+            self.recordfile_desc = os.open(
+                self.recordfile_idx_to_path(self.recordfile_idx), flags=os.O_WRONLY | os.O_CREAT
+            )
         elif self.recordfile_desc == None:
             # no opened file to write into
-            self.recordfile_desc = os.open(self.recordfile_idx_to_path(self.recordfile_idx), flags=os.O_WRONLY|os.O_CREAT)
+            self.recordfile_desc = os.open(
+                self.recordfile_idx_to_path(self.recordfile_idx), flags=os.O_WRONLY | os.O_CREAT
+            )
 
     def decode_record(self) -> Generator[Dict[str, np.ndarray], None, None]:
-        """Decode the record sequentially, each time retuning a dict that contains the data.
-        """
+        """Decode the record sequentially, each time retuning a dict that contains the data."""
         for i in range(self.recordfile_idx):
             recordfile_path = self.recordfile_idx_to_path(i)
             endpoints = self.recordfile_endpoints[i]
@@ -150,16 +160,17 @@ class Record:
     def save_metainfo(self, path):
         pass
 
-    def idx4segment(self, segment_len: int, sub_features: List[str]) -> List[dict]:
+    def idx4segment(self, segment_len: int, sub_features: Optional[List[str]] = None) -> List[dict]:
         """Generate a new index mapping for dataset with: segment_len, sub_features.
-        Only call this function when record has scanned all data, and record has valid attributes: rootdir,recordfile_idx 
-        # todo unit test me!
+        Only call this function when record has scanned all data, and record has valid attributes: rootdir,recordfile_idx
         Args:
             segment_len (int): length of segment we are reading ! ASSUMING segment_len > 1
-            sub_features: (List[str]): features (modalities data) we are reading
+            sub_features: (Optional[List[str]]): features (modalities data) we are reading. If it is None, then we read
+            all features.
 
+        # ! segment length should be greater than 1, less than sequence len
         Returns:
-            Dict[int, Any]: idx mapping
+            List[int, Any]: idx mapping
         """
 
         def has_sub_features(itemproto: Dict[str, Any]) -> bool:
@@ -172,19 +183,21 @@ class Record:
                 bool: _description_
             """
             # although it is numpy array, but the 'None' numpy array is a python object None
-            return all(itemproto[feature] != None for feature in sub_features)
+            return all(not itemproto[feature]["is_none"] for feature in sub_features)
 
-        def popleft2idx(is_segment_start:bool)-> None:
+        def popleft2idx(is_segment_start: bool) -> None:
             """Popleft of the deque, add the popped item to idx4segement with flag of segment_start.
 
             Args:
-                is_segment_start (bool): whether the item is start of segment 
+                is_segment_start (bool): whether the item is start of segment
             """
-            temp = q.popleft()
-            temp["seg_start"] = is_segment_start
+            idx, temp = q.popleft()
+            temp["is_seg_start"] = is_segment_start
+            temp["idx"] = idx
             idx4segment.append(temp)
-            return 
+            return
 
+        sub_features = self.features if sub_features == None else sub_features
         idx4segment: List[dict] = []
         q = collections.deque()
         q_has_seg_tail = False  # indicates if the elements in queue are tail of some segment
@@ -194,20 +207,23 @@ class Record:
                 # new seq start
                 while q:
                     if q_has_seg_tail:
-                        popleft2idx(is_segment_start= False)
+                        popleft2idx(is_segment_start=False)
                     else:
                         q.popleft()
                 q_has_seg_tail = False
                 if has_sub_features(itemproto):
                     # a valid start of sequence
-                    q.append(itemproto)
-            else: 
-                q.append(itemproto)
+                    q.append((i, itemproto))
+            else:
+                q.append((i, itemproto))
                 if len(q) == segment_len:
-                   # claim: elements in the queue must be from the same sequence
-                    popleft2idx(is_segment_start= True)
+                    # claim: elements in the queue must be from the same sequence
+                    popleft2idx(is_segment_start=True)
                     q_has_seg_tail = True
 
+        if q and q_has_seg_tail:
+            # front element in queue is need as last element of some segment
+            popleft2idx(is_segment_start=False)
         # analysis (also for unit test)
         # 1. new seq (including broken) added before queue pops out
         #       the remaining elements in queue are completely useless
