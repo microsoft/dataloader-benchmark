@@ -111,6 +111,68 @@ class Test_Record(unittest.TestCase):
             else:
                 self.assertFalse(item["is_seg_start"])
 
+        seg_len = 3
+        idx4segment = record.idx4segment(segment_len=seg_len, sub_features=["ceo"])
+        self.assertEqual(len(idx4segment), 6)
+        ids = [item["idx"] for item in idx4segment]
+        self.assertListEqual(ids, [0, 1, 2, 5, 6, 7])
+        for i, item in enumerate(idx4segment):
+            if item["idx"] in [0, 5]:
+                self.assertTrue(item["is_seg_start"])
+            else:
+                self.assertFalse(item["is_seg_start"])
+
+                seg_len = 3
+
+        idx4segment = record.idx4segment(segment_len=seg_len, sub_features=["l5", "l1"])
+        self.assertEqual(len(idx4segment), 8)
+        ids = [item["idx"] for item in idx4segment]
+        self.assertListEqual(ids, [0, 1, 2, 3, 4, 5, 6, 7])
+        for i, item in enumerate(idx4segment):
+            if item["idx"] in [0, 1, 4, 5]:
+                self.assertTrue(item["is_seg_start"])
+            else:
+                self.assertFalse(item["is_seg_start"])
+
+        # segment len = 3, sequence len =4, break two features
+        record, dataset, features = build_broken_dataset([3, 6])
+        seq_len = 4
+        # encode dataset
+        for i, item in enumerate(dataset):
+            if i % seq_len == 0:
+                # mock start of a sequence
+                record.encode_item(item, True)
+            else:
+                record.encode_item(item, False)
+        record.close()
+
+        seg_len = 3
+        idx4segment = record.idx4segment(segment_len=seg_len)
+        self.assertEqual(len(idx4segment), 3)
+        ids = [item["idx"] for item in idx4segment]
+        self.assertListEqual(ids, [0, 1, 2])
+        for i, item in enumerate(idx4segment):
+            if item["idx"] in [0, 5]:
+                self.assertTrue(item["is_seg_start"])
+            else:
+                self.assertFalse(item["is_seg_start"])
+
+        # segment len = 3, sequence len =4, break two features
+        record, dataset, features = build_broken_dataset([2, 6])
+        seq_len = 4
+        # encode dataset
+        for i, item in enumerate(dataset):
+            if i % seq_len == 0:
+                # mock start of a sequence
+                record.encode_item(item, True)
+            else:
+                record.encode_item(item, False)
+        record.close()
+
+        seg_len = 3
+        idx4segment = record.idx4segment(segment_len=seg_len)
+        self.assertEqual(len(idx4segment), 0)
+
 
 def build_simple_dataset():
     """Generate a fake dataset to test methods of Record
