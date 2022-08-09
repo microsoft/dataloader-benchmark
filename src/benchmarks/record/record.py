@@ -5,7 +5,9 @@ import collections
 import io
 import json
 import os
-from typing import Any, Dict, Generator, List, Optional, Tuple, Union
+import pickle
+from functools import cache
+from typing import Any, Dict, Generator, List, Optional, Tuple, TypeVar, Union
 
 import numpy as np
 import torch.utils.data as data
@@ -18,8 +20,10 @@ SUBFOLDER_NAME = "records"  # subfolder name to stored serialized record data
 MAX_RECORDFILE_SIZE = 1e8  # 100 mb, maximum size of a single record file
 
 # todo: test speed difference between os and python level file operation
-# frame 0, optical flow offset
-# pre transform
+# todo :frame 0, optical flow offset
+# todo: pre transform
+
+R = TypeVar("R", bound="Record")
 
 
 class Record:
@@ -30,6 +34,7 @@ class Record:
         self.features: List[str] = features  # seq_start marks if the frame is the beginning of a new sequence
         self.rootdir: str = os.path.join(rootdir, SUBFOLDER_NAME)  # store data in a separate directory (subfolder)
         os.makedirs(self.rootdir, exist_ok=True)
+
         self.byte_count: int = 0  # number of bytes written into current record file
         self.recordfile_idx: int = 0  # number of record file created for dataset
         self.recordfile_endpoints: List[list] = [
@@ -38,6 +43,9 @@ class Record:
         self.recordfile_desc: Optional[int] = None  # file descriptor for current record file
         self.idx2recordproto: Dict[int, dict] = {}  # serialization proto info of each data item
         self.idx: int = 0  # index of current data item to be processed
+
+        # a cache dict that stores ids mapping for each (segment_len, sub features)
+        self._idx4segment_cache: Dict[str, List[dict]] = {}
 
     def recordfile_idx_to_path(self, recordfile_idx: int) -> str:
         """Return path to record file given the idx of the record file.
@@ -194,6 +202,9 @@ class Record:
             return
 
         sub_features = self.features if sub_features == None else sub_features
+        cache_key = str(segment_len) + "#" + "#".join(sorted(sub_features))
+        if cache_key in self._idx4segment_cache:
+            return self._idx4segment_cache[cache_key]
         idx4segment: List[dict] = []
         q = collections.deque()
         q_has_seg_tail = False  # indicates if the elements in queue are tail of some segment
@@ -225,12 +236,31 @@ class Record:
         #       the remaining elements in queue are completely useless
         # 2. new seq (including broken) added after queue has popped out
         #       the remaining elements are not start of segment but are tails of some segment
+        self._idx4segment_cache[cache_key] = idx4segment
         return idx4segment
 
     def close_recordfile(self):
         """Close opened file descriptor! This needs to be called when finishes scanning over the dataset."""
         self.recordfile_endpoints[-1].append(self.idx)
         os.close(self.recordfile_desc)
+
+    def dump(self) -> None:
+        """save instance of record"""
+        with open(os.path.join(self.rootdir, "recordproto.bin"), mode="wb") as f:
+            pickle.dump(self, file=f)
+
+    @classmethod
+    def load_recordproto(cls, path: str) -> R:
+        """return an instance of record from file (stored at path).
+
+        Args:
+            path (str): path to the file that stores pickled record
+
+        Returns:
+            R: an instance of record
+        """
+        with open(path, mode="wb") as f:
+            return pickle.load(f)
 
 
 def read_tartanair_features(rootdir: str, video_frame: Dict[str, str], features: List[str]) -> Dict[str, np.ndarray]:
