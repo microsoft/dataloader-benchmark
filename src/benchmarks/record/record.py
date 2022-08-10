@@ -6,8 +6,7 @@ import io
 import json
 import os
 import pickle
-from typing import (Any, Dict, Generator, List, Optional, Sequence, Tuple,
-                    TypeVar, Union)
+from typing import Any, Dict, Generator, List, Optional, Sequence, Tuple, TypeVar, Union
 
 import numpy as np
 import torch.utils.data as data
@@ -22,6 +21,7 @@ MAX_RECORDFILE_SIZE = 1e8  # 100 mb, maximum size of a single record file
 # todo: test speed difference between os and python level file operation
 # todo :frame 0, optical flow offset
 # todo: pre transform
+# todo: add buffer for reading
 
 R = TypeVar("R", bound="Record")
 
@@ -37,9 +37,8 @@ class Record:
 
         self.byte_count: int = 0  # number of bytes written into current record file
         self.recordfile_idx: int = 0  # number of record file created for dataset
-        self.recordfile_endpoints: List[list] = [
-            [0]
-        ]  # track the idx endpoints for each record file, [[start_idx, end_idx)]
+        # track the idx endpoints for each record file, [[start_idx, end_idx)]
+        self.recordfile_endpoints: List[list] = []
         self.recordfile_desc: Optional[int] = None  # file descriptor for current record file
         self.idx2recordproto: Dict[int, dict] = {}  # serialization proto info of each data item
         self.idx: int = 0  # index of current data item to be processed
@@ -85,13 +84,13 @@ class Record:
         buffer = io.BytesIO()
         for feature in self.features:
             data = item[feature]
-            buffer.write(data.tobytes())
             self.idx2recordproto[self.idx][feature] = {
                 "is_none": (data.dtype == np.dtype("O") and data == None),  # this feature is essentially missing, and
                 "dtype": data.dtype,
                 "shape": data.shape,
                 "feature_offset": buffer.tell(),
             }
+            buffer.write(data.tobytes())
         os.write(self.recordfile_desc, buffer.getbuffer())
 
         self.byte_count += buffer.tell()
@@ -119,6 +118,7 @@ class Record:
             )
         elif self.recordfile_desc == None:
             # no opened record file to write into
+            self.recordfile_endpoints.append([self.idx])
             self.recordfile_desc = os.open(
                 self.recordfile_idx_to_path(self.recordfile_idx), flags=os.O_WRONLY | os.O_CREAT
             )
@@ -137,14 +137,14 @@ class Record:
             Dict[str, np.ndarray]: data
         """
         item = {}
-        item_offset = itemproto["offset"]
+        item_offset = itemproto["item_offset"]
         for feature in self.features:
             item[feature] = np.memmap(
                 recordfile_desc,
                 dtype=itemproto[feature]["dtype"],
                 mode="r",
                 offset=item_offset + itemproto[feature]["feature_offset"],
-                shape=itemproto["feature"]["shape"],
+                shape=itemproto[feature]["shape"],
             )
         # * do we need to close the memmap?
         return item
@@ -176,7 +176,7 @@ class Record:
             then we read all features.
 
         Returns:
-            Dict[str, Any]: protocal needed for reading segments from data 
+            Dict[str, Any]: protocal needed for reading segments from data
         """
 
         def has_sub_features(itemproto: Dict[str, Any]) -> bool:
@@ -239,53 +239,65 @@ class Record:
         #       the remaining elements in queue are completely useless
         # 2. new seq (including broken) added after queue has popped out
         #       the remaining elements are not start of segment but are tails of some segment
-        self.segmentproto_cache[cache_key] = {"segment_len": segment_len, "features": sub_features, "head_idx_proto": headidx4segment, "item_idx_proto":itemidx4segment} 
-        return self.segmentproto_cache[cache_key] 
+        self.segmentproto_cache[cache_key] = {
+            "segment_len": segment_len,
+            "features": sub_features,
+            "headidx4segment": headidx4segment,
+            "itemidx4segment": itemidx4segment,
+        }
+        return self.segmentproto_cache[cache_key]
 
-    def decode_segment(self, start_item_idx:int, end_item_idx:int, segment_len:int) -> Generator[Dictp[str, np.ndarray], None, None]:
+    def decode_segment(
+        self, start_head_idx: int, end_head_idx: int, segment_len: int
+    ) -> Generator[Dict[str, np.ndarray], None, None]:
         """Given the range of items, return a sequence of segments in between with length segment_len.
-        Note:
-            The start_item_idx, and end_item_idx must be compatible(generated from) with the segment length.
+                Note:
+                    The start_item_idx, and end_item_idx must be compatible(generated from) with the segment length.
 
-        Args:
-            start_item_idx (int): item_idx of the head of the first segment to return, inclusive
-            end_item_idx (int): item_idx of the head of the last segment to return, exclusive.
-            segment_len (int): length of segment we need to generate
+                Args:
+                    start_item_idx (int): item_idx of the head of the first segment to return, inclusive
+                    end_item_idx (int): item_idx of the head of the last segment to return, exclusive.
+                    segment_len (int): length of segment we need to generate
 
-        Yields:
-            Generator[Dict[str, np.ndarray], None, None]: sequence of items of length segment_len 
-e       """
+                Yields:
+                    Generator[Dict[str, np.ndarray], None, None]: sequence of items of length segment_len
+        e"""
         recordfile_start, recordfile_end = -1, -1
         for i in range(self.recordfile_idx):
             endpoints = self.recordfile_endpoints[i]
             # both endpoints[1] and end_item_idx is exclusive
-            if recordfile_start == -1 and (endpoints[0] <= start_item_idx < endpoints[1]):
+            if recordfile_start == -1 and (endpoints[0] <= start_head_idx < endpoints[1]):
                 recordfile_start = i
-            if recordfile_end == -1 and (endpoints[0] < end_item_idx <= endpoints[1]):
-                recordfile_end= i
-        for i in range(recordfile_start, recordfile_end+1):
+            if recordfile_end == -1 and (endpoints[0] < end_head_idx <= endpoints[1]):
+                recordfile_end = i
+            if recordfile_start != -1 and recordfile_end != -1:
+                break
+        for i in range(recordfile_start, recordfile_end + 1):
             recordfile_path = self.recordfile_idx_to_path(i)
             endpoints = self.recordfile_endpoints[i]
-            endpoints[0] = max(endpoints[0], start_item_idx)
-            endpoints[1] = min(endpoints[1], end_item_idx)
+            endpoint_start = max(endpoints[0], start_head_idx)
+            endpoint_end = min(endpoints[1], end_head_idx)
             q = collections.deque()
             with open(recordfile_path, mode="rb") as f:
-                for idx in range(endpoints[0], endpoints[1]):
-                    q.append(self.decode_item(f, self.idx2recordproto[idx]))
-                    while not q[0]["is_seg_start"]:
+                for idx in range(endpoint_start, endpoint_end):
+                    q.append(
+                        (self.idx2recordproto[idx]["is_seg_start"], self.decode_item(f, self.idx2recordproto[idx]))
+                    )
+                    while not q[0][0]:
                         q.popleft()
                     if len(q) == segment_len:
                         yield self.collate_items(q)
 
-    def collate_items(self, q:Sequence[dict]) -> Dict[str, np.ndarray]:
+    def collate_items(self, q: Sequence[Tuple[bool, dict]]) -> Dict[str, np.ndarray]:
         segment = {}
         for feature in self.features:
-            segment[feature] = np.stack([item[feature] for item in q], axis=0)
+            segment[feature] = np.stack([item[feature] for _, item in q], axis=0)
         return segment
 
     def close_recordfile(self):
         """Close opened file descriptor! This needs to be called when finishes scanning over the dataset."""
         self.recordfile_endpoints[-1].append(self.idx)
+        self.recordfile_idx += 1
         os.close(self.recordfile_desc)
 
     def dump(self) -> None:
@@ -305,9 +317,9 @@ e       """
         """
         with open(path, mode="wb") as f:
             return pickle.load(f)
-    
-    def shard_record(self, num_shards:int):
 
+    def shard_record(self, num_shards: int):
+        pass
 
 
 def read_tartanair_features(rootdir: str, video_frame: Dict[str, str], features: List[str]) -> Dict[str, np.ndarray]:
