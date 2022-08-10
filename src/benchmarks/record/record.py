@@ -6,8 +6,8 @@ import io
 import json
 import os
 import pickle
-from functools import cache
-from typing import Any, Dict, Generator, List, Optional, Tuple, TypeVar, Union
+from typing import (Any, Dict, Generator, List, Optional, Sequence, Tuple,
+                    TypeVar, Union)
 
 import numpy as np
 import torch.utils.data as data
@@ -44,8 +44,8 @@ class Record:
         self.idx2recordproto: Dict[int, dict] = {}  # serialization proto info of each data item
         self.idx: int = 0  # index of current data item to be processed
 
-        # a cache dict that stores ids mapping for each (segment_len, sub features)
-        self._idx4segment_cache: Dict[str, List[dict]] = {}
+        # a cache dict that stores protocal info for each (segment_len, sub features)
+        self.segmentproto_cache: Dict[str, dict] = {}
 
     def recordfile_idx_to_path(self, recordfile_idx: int) -> str:
         """Return path to record file given the idx of the record file.
@@ -163,7 +163,7 @@ class Record:
                 for idx in range(endpoints[0], endpoints[1]):
                     yield self.decode_item(f, self.idx2recordproto[idx])
 
-    def idx4segment(self, segment_len: int, sub_features: Optional[List[str]] = None) -> List[dict]:
+    def get_proto4segment(self, segment_len: int, sub_features: Optional[List[str]] = None) -> Dict[str, Any]:
         """Generate a new index2recordproto so as to read segments from sequences of datasets. Each data item of segment should
         contain all features in sub_features.
 
@@ -176,7 +176,7 @@ class Record:
             then we read all features.
 
         Returns:
-            List[dict]: where each dict contains protocal of the data item
+            Dict[str, Any]: protocal needed for reading segments from data 
         """
 
         def has_sub_features(itemproto: Dict[str, Any]) -> bool:
@@ -198,14 +198,17 @@ class Record:
             """
             temp = q.popleft()
             temp["is_seg_start"] = is_segment_start
-            idx4segment.append(temp)
+            if is_segment_start:
+                headidx4segment.append(len(itemidx4segment))
+            itemidx4segment.append(temp)
             return
 
         sub_features = self.features if sub_features == None else sub_features
         cache_key = str(segment_len) + "#" + "#".join(sorted(sub_features))
-        if cache_key in self._idx4segment_cache:
-            return self._idx4segment_cache[cache_key]
-        idx4segment: List[dict] = []
+        if cache_key in self.segmentproto_cache:
+            return self.segmentproto_cache[cache_key]
+        itemidx4segment: List[dict] = []
+        headidx4segment: List[int] = []
         q = collections.deque()
         q_has_seg_tail = False  # indicates if the elements in queue are tail of some segment
         for i in range(self.idx):
@@ -236,8 +239,49 @@ class Record:
         #       the remaining elements in queue are completely useless
         # 2. new seq (including broken) added after queue has popped out
         #       the remaining elements are not start of segment but are tails of some segment
-        self._idx4segment_cache[cache_key] = idx4segment
-        return idx4segment
+        self.segmentproto_cache[cache_key] = {"segment_len": segment_len, "features": sub_features, "head_idx_proto": headidx4segment, "item_idx_proto":itemidx4segment} 
+        return self.segmentproto_cache[cache_key] 
+
+    def decode_segment(self, start_item_idx:int, end_item_idx:int, segment_len:int) -> Generator[Dictp[str, np.ndarray], None, None]:
+        """Given the range of items, return a sequence of segments in between with length segment_len.
+        Note:
+            The start_item_idx, and end_item_idx must be compatible(generated from) with the segment length.
+
+        Args:
+            start_item_idx (int): item_idx of the head of the first segment to return, inclusive
+            end_item_idx (int): item_idx of the head of the last segment to return, exclusive.
+            segment_len (int): length of segment we need to generate
+
+        Yields:
+            Generator[Dict[str, np.ndarray], None, None]: sequence of items of length segment_len 
+e       """
+        recordfile_start, recordfile_end = -1, -1
+        for i in range(self.recordfile_idx):
+            endpoints = self.recordfile_endpoints[i]
+            # both endpoints[1] and end_item_idx is exclusive
+            if recordfile_start == -1 and (endpoints[0] <= start_item_idx < endpoints[1]):
+                recordfile_start = i
+            if recordfile_end == -1 and (endpoints[0] < end_item_idx <= endpoints[1]):
+                recordfile_end= i
+        for i in range(recordfile_start, recordfile_end+1):
+            recordfile_path = self.recordfile_idx_to_path(i)
+            endpoints = self.recordfile_endpoints[i]
+            endpoints[0] = max(endpoints[0], start_item_idx)
+            endpoints[1] = min(endpoints[1], end_item_idx)
+            q = collections.deque()
+            with open(recordfile_path, mode="rb") as f:
+                for idx in range(endpoints[0], endpoints[1]):
+                    q.append(self.decode_item(f, self.idx2recordproto[idx]))
+                    while not q[0]["is_seg_start"]:
+                        q.popleft()
+                    if len(q) == segment_len:
+                        yield self.collate_items(q)
+
+    def collate_items(self, q:Sequence[dict]) -> Dict[str, np.ndarray]:
+        segment = {}
+        for feature in self.features:
+            segment[feature] = np.stack([item[feature] for item in q], axis=0)
+        return segment
 
     def close_recordfile(self):
         """Close opened file descriptor! This needs to be called when finishes scanning over the dataset."""
@@ -261,6 +305,9 @@ class Record:
         """
         with open(path, mode="wb") as f:
             return pickle.load(f)
+    
+    def shard_record(self, num_shards:int):
+
 
 
 def read_tartanair_features(rootdir: str, video_frame: Dict[str, str], features: List[str]) -> Dict[str, np.ndarray]:
