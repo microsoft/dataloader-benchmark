@@ -19,7 +19,6 @@ SUBFOLDER_NAME = "records"  # subfolder name to stored serialized record data
 MAX_RECORDFILE_SIZE = 1000  # 1e8, 100 mb, maximum size of a single record file
 
 # todo: test speed difference between os and python level file operation
-# todo :frame 0, optical flow offset
 # todo: pre transform
 # todo: add buffer for reading
 
@@ -37,7 +36,7 @@ class Record:
 
         self.byte_count: int = 0  # number of bytes written into current record file
         self.recordfile_idx: int = 0  # number of record file created for dataset
-        # track the idx endpoints for each record file, [[start_idx, end_idx)]
+        # track the idx endpoints for each record file, [[start_idx, end_idx]], both are inclusive
         self.recordfile_endpoints: List[list] = []
         self.recordfile_desc: Optional[int] = None  # file descriptor for current record file
         self.idx2recordproto: Dict[int, dict] = {}  # serialization proto info of each data item
@@ -110,7 +109,7 @@ class Record:
             # current record file big enough
             self.byte_count = 0
             self.recordfile_idx += 1
-            self.recordfile_endpoints[-1].append(self.idx)
+            self.recordfile_endpoints[-1].append(self.idx - 1)
             self.recordfile_endpoints.append([self.idx])
             os.close(self.recordfile_desc)
             self.recordfile_desc = os.open(
@@ -160,7 +159,7 @@ class Record:
             recordfile_path = self.recordfile_idx_to_path(i)
             endpoints = self.recordfile_endpoints[i]
             with open(recordfile_path, mode="rb") as f:
-                for idx in range(endpoints[0], endpoints[1]):
+                for idx in range(endpoints[0], endpoints[1] + 1):
                     yield self.decode_item(f, self.idx2recordproto[idx])
 
     def get_proto4segment(self, segment_len: int, sub_features: Optional[List[str]] = None) -> Dict[str, Any]:
@@ -252,11 +251,11 @@ class Record:
     ) -> Generator[Dict[str, np.ndarray], None, None]:
         """Given the range of items, return a sequence of segments in between with length segment_len.
                 Note:
-                    The start_item_idx, and end_item_idx must be compatible(generated from) with the segment length.
+                    The start_head_idx, and end_head_idx must be compatible(generated from) with the segment length.
 
                 Args:
-                    start_item_idx (int): item_idx of the head of the first segment to return, inclusive
-                    end_item_idx (int): item_idx of the head of the last segment to return, exclusive.
+                    start_head_idx (int): item_idx of the head of the first segment to return, inclusive
+                    end_head_idx (int): item_idx of the head of the last segment to return, inclusive.
                     segment_len (int): length of segment we need to generate
 
                 Yields:
@@ -265,10 +264,10 @@ class Record:
         recordfile_start, recordfile_end = -1, -1
         for i in range(self.recordfile_idx):
             endpoints = self.recordfile_endpoints[i]
-            # both endpoints[1] and end_item_idx is exclusive
-            if recordfile_start == -1 and (endpoints[0] <= start_head_idx < endpoints[1]):
+            # both endpoints[1] are inclusive
+            if recordfile_start == -1 and (endpoints[0] <= start_head_idx <= endpoints[1]):
                 recordfile_start = i
-            if recordfile_end == -1 and (endpoints[0] < end_head_idx <= endpoints[1]):
+            if recordfile_end == -1 and (endpoints[0] <= end_head_idx <= endpoints[1]):
                 recordfile_end = i
             if recordfile_start != -1 and recordfile_end != -1:
                 break
@@ -276,10 +275,10 @@ class Record:
             recordfile_path = self.recordfile_idx_to_path(i)
             endpoints = self.recordfile_endpoints[i]
             endpoint_start = max(endpoints[0], start_head_idx)
-            endpoint_end = min(endpoints[1], end_head_idx)
+            endpoint_end = min(endpoints[1], end_head_idx)  # end_head_idx is inclusive while endpoint[1] is not
             q = collections.deque()
             with open(recordfile_path, mode="rb") as f:
-                for idx in range(endpoint_start, endpoint_end):
+                for idx in range(endpoint_start, endpoint_end + 1):
                     q.append(
                         (self.idx2recordproto[idx]["is_seg_start"], self.decode_item(f, self.idx2recordproto[idx]))
                     )
@@ -296,7 +295,7 @@ class Record:
 
     def close_recordfile(self):
         """Close opened file descriptor! This needs to be called when finishes scanning over the dataset."""
-        self.recordfile_endpoints[-1].append(self.idx)
+        self.recordfile_endpoints[-1].append(self.idx - 1)
         self.recordfile_idx += 1
         os.close(self.recordfile_desc)
 
@@ -306,7 +305,7 @@ class Record:
             pickle.dump(self, file=f)
 
     @classmethod
-    def load_recordproto(cls, path: str) -> R:
+    def load_recordproto(cls, rootdir: str) -> R:
         """return an instance of record from file (stored at path).
 
         Args:
@@ -315,8 +314,9 @@ class Record:
         Returns:
             R: an instance of record
         """
-        with open(path, mode="wb") as f:
-            return pickle.load(f)
+        with open(os.path.join(rootdir, "recordproto.bin"), mode="wb") as f:
+            obj = pickle.load(f)
+        return obj
 
     def shard_record(self, num_shards: int):
         pass
@@ -394,12 +394,14 @@ def encode_tartanAIR(rootdir: str, json_filepath: str) -> None:
 
     for video_name in tqdm(tartan_config["ann"]):
         video = tartan_config["ann"][video_name]
-        for i in range(len(video)):
+        # ! drop out the first frame since flow data starts at the first frame
+        for i in range(1, len(video)):
             # only use the clips that all used data types are avaliable in each frame
             item = read_tartanair_features(rootdir, video[i], features)
-            record.encode_item(item, (i == 0))
+            record.encode_item(item, (i == 1))
         # notify the record that a complete video sequence is read
     record.close_recordfile()
+    record.dump()
 
 
 # helper functions from original tartan dataloader: https://github.com/yunyikristy/UPAM/blob/master/compass_mem/data/tartanair_video.py#L43

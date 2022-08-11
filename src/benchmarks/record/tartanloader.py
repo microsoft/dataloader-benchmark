@@ -11,7 +11,7 @@ from record import Record
 
 # todo add map style
 # todo: transform (offline, online, to discuss with shuang)
-# todo: test segment reader and profile
+# todo: add profile
 class IterTartanAIRDataset(torch.utils.data.IterableDatasetDataset):
     """A torch dataset class that iteratively read from record files. It supports native pytorch multi-worker settings.
 
@@ -40,9 +40,15 @@ class IterTartanAIRDataset(torch.utils.data.IterableDatasetDataset):
             # ! check worker id starts from zero
             worker_id = worker_info.id
             iter_start = itemidx4segment[headidx4segment[worker_id * per_worker]]
-            iter_end = itemidx4segment[headidx4segment[(worker_id + 1) * per_worker]]
+            iter_end = itemidx4segment[headidx4segment[(worker_id + 1) * per_worker - 1]]
         return iter(self.record.decode_segment(iter_start, iter_end, segment_len))
 
     def __next__(self):
         # ! lightning seems to insist on implementing this function
         pass
+
+
+if __name__ == "__main__":
+    # sanity check dataloader
+    rootdir = "/datadrive/azure_mounted_data/commondataset/tartanair-release1/abandonedfactory/records"
+    record = Record.load_recordproto(rootdir)
