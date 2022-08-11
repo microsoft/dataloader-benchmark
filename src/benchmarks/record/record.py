@@ -16,10 +16,12 @@ from tqdm import tqdm
 from zipreader import ZipReader, is_zip_path
 
 SUBFOLDER_NAME = "records"  # subfolder name to stored serialized record data
-MAX_RECORDFILE_SIZE = 1000  # 1e8, 100 mb, maximum size of a single record file
+MAX_RECORDFILE_SIZE = 1e8  # 1e8, 100 mb, maximum size of a single record file
 
-# todo: test speed difference between os and python level file operation
 # todo: pre transform
+# todo: test read segment with multiple workers: number of overall segments and start_end of each segment
+# todo: try file blob
+# todo: test speed difference between os and python level file operation
 # todo: add buffer for reading
 
 R = TypeVar("R", bound="Record")
