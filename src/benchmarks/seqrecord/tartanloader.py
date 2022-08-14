@@ -7,10 +7,10 @@ from typing import Dict, List, Optional
 import numpy as np
 import torch
 import torchdata.datapipes as dp
-from requests import head
-from src.benchmarks.seqrecord.seqrecord import SeqRecord
+from tqdm import tqdm
 
-# todo add map style
+from seqrecord import SeqRecord
+
 # todo: pre fetch and shuffle
 # todo: transform (offline, online, to discuss with shuang)
 # todo: add profile
@@ -28,6 +28,9 @@ class IterTartanAIRDatapipe(dp.iter.IterDataPipe):
     def __iter__(self):
         for segment in self.record.read_all_segments(self.segmentproto):
             yield segment
+
+    def __len__(self):
+        return len(self.segmentproto["head4segment"])
 
 
 class MapTartanAIRDatapipe(dp.map.MapDataPipe):
@@ -60,14 +63,12 @@ def stack_nparray(data_np: Dict[str, List[np.ndarray]]) -> Dict[str, torch.Tenso
     return data_torch
 
 
-def build_tartanair_datapipe():
-    rootdir = "/datadrive/azure_mounted_data/commondataset/tartanair-release1/abandonedfactory/records"
-    record = SeqRecord.load_recordobj(rootdir)
-    segment_len = 16
+def build_itertartanair_datapipe(record, segment_len):
+
     datapipe = IterTartanAIRDatapipe(record, segment_len, features=None)
     # Shuffle will happen as long as you do NOT set `shuffle=False` later in the DataLoader
     # https://pytorch.org/data/main/tutorial.html#working-with-dataloader
-    datapipe = dp.iter.Shuffler(datapipe, buffer_size=10000)
+    datapipe = dp.iter.Shuffler(datapipe, buffer_size=100)
     # sharding: Place ShardingFilter (datapipe.sharding_filter) as early as possible in the pipeline,
     # especially before expensive operations such as decoding, in order to avoid repeating these expensive operations across worker/distributed processes.
     datapipe = dp.iter.ShardingFilter(datapipe)
@@ -77,14 +78,27 @@ def build_tartanair_datapipe():
     # https://pytorch.org/data/main/tutorial.html#working-with-dataloader
     datapipe = dp.iter.Batcher(datapipe, batch_size=8, drop_last=True)
     datapipe = dp.iter.Collator(datapipe)
+    return datapipe
+
+
+def build_maptartanair_datapipe(record, segment_len):
+    # ! sharding /distributed? for mapping style datapipe?
+
+    datapipe = MapTartanAIRDatapipe(record, segment_len, features=None)
+    datapipe = dp.map.Shuffler(datapipe)
+    datapipe = dp.map.Mapper(datapipe, fn=stack_nparray)
+    datapipe = dp.map.Batcher(datapipe, batch_size=8, drop_last=True)
+    return datapipe
 
 
 if __name__ == "__main__":
     # sanity check dataloader
-
-    datapipe = build_tartanair_datapipe()
-    dataloader = torch.utils.data.Dataloader(datapipe, shuffle=True, num_workers=0, prefetch_factor=2)
+    rootdir = "/datadrive/azure_mounted_data/commondataset/tartanair-release1/abandonedfactory/records"
+    record = SeqRecord.load_recordobj(rootdir)
+    segment_len = 16
+    datapipe = build_itertartanair_datapipe(record, segment_len)
+    dataloader = torch.utils.data.DataLoader(datapipe, shuffle=True, num_workers=0, prefetch_factor=2)
     num_segs = 0
-    for segment in dataloader:
+    for segment in tqdm(dataloader):
         num_segs += 1
     print(num_segs)

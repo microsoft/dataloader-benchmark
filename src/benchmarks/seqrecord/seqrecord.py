@@ -21,6 +21,8 @@ MAX_RECORDFILE_SIZE = 1e8  # 1e8, 100 mb, maximum size of a single record file
 
 # todo: pre transform
 # todo: test read segment with multiple workers: number of overall segments and start_end of each segment
+# and other configs along with bottle necker of torch and other tools
+# skip the first frame in record
 # todo: try file blob
 # todo: test speed difference between os and python level file operation
 # todo: add buffer for reading
