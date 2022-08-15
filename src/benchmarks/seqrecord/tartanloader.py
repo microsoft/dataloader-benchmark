@@ -17,6 +17,8 @@ from seqrecord import SeqRecord
 # todo: add profile
 # todo: ask, how distributed works?
 # todo: test with old dataloader and some stats of record (number of record comparison etc...)
+# todo: how to shard in the record file level? future work and why it is needed?
+# just break read_all_segments and return record with subset of record files, along with file2item index
 
 
 class IterTartanAIRDatapipe(dp.iter.IterDataPipe):

@@ -6,6 +6,7 @@ import io
 import json
 import os
 import pickle
+from array import array
 from turtle import update
 from typing import Any, Dict, Generator, List, Optional, Sequence, Tuple, TypeVar, Union
 
@@ -80,6 +81,7 @@ class SeqRecord:
                 "dtype": data.dtype,
                 "shape": data.shape,
                 "feature_offset": buffer.tell(),
+                "nbytes": data.nbytes,
             }
             buffer.write(data.tobytes())
         os.write(self.recordfile_desc, buffer.getbuffer())
@@ -138,6 +140,30 @@ class SeqRecord:
                 shape=itemproto[feature]["shape"],
             )
         # * do we need to close the memmap?
+        return item
+
+    def read_item_frombuffer(
+        self, recordfile_desc: io.BufferedReader, itemproto: Dict[str, Union[int, dict]]
+    ) -> Dict[str, np.ndarray]:
+        """Given record file descriptor and serialization proto of a single data item, return the
+        decoded dictionary(feature->data(np.ndarray)) of the item, where decoding is done by np.frombuffer()
+
+        Args:
+            recordfile_desc (io.BufferedReader): python file object of the record file (required by numpy)
+            itemproto (Dict[str, Any]): dict that contains protocal info of a specific data item
+
+        Returns:
+            Dict[str, np.ndarray]: data
+        """
+        item = {}
+        recordfile_desc.seek(itemproto["item_offset"])
+        for feature in self.features:
+            bytes = recordfile_desc.read(itemproto[feature]["nbytes"])
+            array1d = np.frombuffer(
+                bytes,
+                dtype=itemproto[feature]["dtype"],
+            )
+            item[feature] = array1d.reshape(itemproto[feature]["shape"])
         return item
 
     def read_record(self) -> Generator[Dict[str, np.ndarray], None, None]:
@@ -261,7 +287,7 @@ class SeqRecord:
         q = []
         with open(recordfile_path, mode="rb") as f:
             for idx in range(head_idx, head_idx + segment_len):
-                q.append((idx == head_idx, self.read_item(f, self.idx2recordproto[idx])))
+                q.append((idx == head_idx, self.read_item_frombuffer(f, self.idx2recordproto[idx])))
         return self.collate_items(q)
 
     def collate_items(self, q: Sequence[Tuple[bool, dict]]) -> Dict[str, List[np.ndarray]]:
