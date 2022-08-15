@@ -35,16 +35,16 @@ class IterTartanAIRDatapipe(dp.iter.IterDataPipe):
         return len(self.segmentproto["head4segment"])
 
 
-class MapTartanAIRDatapipe(dp.map.MapDataPipe):
+class MapTartanAIRDataset(torch.utils.data.Dataset):
     def __init__(self, record: SeqRecord, segment_len: int, features: Optional[List[str]]) -> None:
         super().__init__()
         self.segmentproto = record.get_proto4segment(segment_len, features)
         self.record = record
 
-    def __getitem__(self, index: int) -> Dict[str, List[np.ndarray]]:
+    def __getitem__(self, index: int) -> Dict[str, torch.Tensor]:
         head_idx = self.segmentproto["head4segment"][index]
         item = self.record.read_one_segment(self.segmentproto["segment_len"], head_idx)
-        return item
+        return list2tensor(item)
 
     def __len__(self):
         return len(self.segmentproto["head4segment"])
@@ -57,7 +57,7 @@ def collate_fn(batch: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
     return collated_batch
 
 
-def list2array(data_np: Dict[str, List[np.ndarray]]) -> Dict[str, torch.Tensor]:
+def list2tensor(data_np: Dict[str, List[np.ndarray]]) -> Dict[str, torch.Tensor]:
     """transform data from list of np.array to torch tensor
 
     Args:
@@ -81,23 +81,12 @@ def build_itertartanair_datapipe(record, segment_len, dl_config):
     # sharding: Place ShardingFilter (datapipe.sharding_filter) as early as possible in the pipeline,
     # especially before expensive operations such as decoding, in order to avoid repeating these expensive operations across worker/distributed processes.
     datapipe = dp.iter.ShardingFilter(datapipe)
-    datapipe = dp.iter.Mapper(datapipe, fn=list2array)
+    datapipe = dp.iter.Mapper(datapipe, fn=list2tensor)
     # Note that if you choose to use Batcher while setting batch_size > 1 for DataLoader,
     # your samples will be batched more than once. You should choose one or the other.
     # https://pytorch.org/data/main/tutorial.html#working-with-dataloader
     datapipe = dp.iter.Batcher(datapipe, batch_size=dl_config["batch_size"], drop_last=True)
     datapipe = dp.iter.Collator(datapipe)
-    return datapipe
-
-
-def build_maptartanair_datapipe(record, segment_len, batch_size):
-    # ! sharding /distributed? for mapping style datapipe?
-
-    datapipe = MapTartanAIRDatapipe(record, segment_len, features=None)
-    datapipe = dp.map.Shuffler(datapipe)
-    datapipe = dp.map.Mapper(datapipe, fn=list2array)
-    datapipe = dp.map.Batcher(datapipe, batch_size=batch_size, drop_last=True)
-    datapipe = dp.map.Mapper(datapipe, fn=collate_fn)
     return datapipe
 
 
@@ -113,15 +102,18 @@ def test_iter(record, segment_len, dl_config):
 
 
 def test_map(record, segment_len, dl_config):
-    datapipe = build_maptartanair_datapipe(record, segment_len, dl_config["batch_size"])
+    dataset = MapTartanAIRDataset(record, segment_len, features=None)
     dataloader = torch.utils.data.DataLoader(
-        datapipe, shuffle=True, num_workers=dl_config["num_workers"], prefetch_factor=dl_config["prefetch_factor"]
+        dataset,
+        batch_size=dl_config["batch_size"],
+        shuffle=True,
+        num_workers=dl_config["num_workers"],
+        drop_last=True,
     )
     for batch in tqdm(dataloader):
-        # # for key in batch:
-        # for key in batch:
-        #     batch[key].cuda()
         pass
+        # for key in batch:
+        #    batch[key].cuda()
 
 
 if __name__ == "__main__":
