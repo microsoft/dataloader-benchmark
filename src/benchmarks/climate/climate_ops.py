@@ -1,8 +1,7 @@
 import argparse
 
 
-def get_climate_args():
-    parser = argparse.ArgumentParser()
+def get_climate_args(parser):
 
     parser.add_argument(
         "--use", type=str, default="pretrain", choices=["pretrain", "forecast"], help="Use forecast or pretrain"
@@ -22,5 +21,5 @@ def get_climate_args():
         type=str,
         choices=["z", "r", "u", "v", "t", "t2m", "u10", "v10"],
     )
-    args = parser.parse_args()
-    return args
+
+    return parser

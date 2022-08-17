@@ -10,5 +10,5 @@ def get_common_args():
     parser.add_argument("--benchmark_results_file", default="benchmark_results_tartanair.csv", type=str)
     parser.add_argument("--verbose", default="no", type=lambda x: bool(strtobool(x)))
 
-    args = parser.parse_args()
-    return args
+    
+    return parser
