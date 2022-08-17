@@ -1,9 +1,10 @@
-from benchmarker import Benchmarker
+from time import perf_counter
+
+from src.data.tartanair.build import TartanAirNoTransform, TartanAirVideoDataset, build_loader
+from src.utils.opts import parse_args
 from torch.utils.data import DataLoader
 
-from src.data.tartanair import build_loader
-from src.data.tartanair.build import TartanAirNoTransform, TartanAirVideoDataset
-from src.utils.opts import parse_args
+from benchmarker import Benchmarker
 
 
 def get_dataloader(args):
@@ -28,10 +29,13 @@ def get_dataloader_no_transform(args):
 
 
 def benchmark(args):
+    start = perf_counter()
     dataloader = get_dataloader(args)
     benchmarker = Benchmarker(verbose=args.verbose, library="pytorch", dataset="tartanair")
     benchmarker.set_dataloader(dataloader)
     benchmarker.benchmark_tartanair(args)
+    end = perf_counter()
+    print(f"{(start-end)/60.0=}")
 
 
 def main(args):

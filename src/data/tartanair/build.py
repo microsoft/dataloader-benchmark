@@ -11,11 +11,10 @@ import numpy as np
 import torch
 import torch.utils.data
 from PIL import Image, ImageFilter, ImageOps
+from src.utils.utils import ResizeFlowNP
 from timm.data import create_transform
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from torchvision import transforms
-
-from src.utils.utils import ResizeFlowNP
 
 from .tartanair_video import TartanAirVideoDataset
 
@@ -51,7 +50,7 @@ def build_loader(args):
         num_workers=args.num_workers,
         pin_memory=args.pin_memory,
         drop_last=True,
-        shuffle=False,
+        shuffle=True,
     )
 
     if not args.use_val:
@@ -216,6 +215,8 @@ def build_tartanair_video_transform(is_train, args):
                 resize_size=args.img_dim,
                 modalities=args.modalities,
             )
+        elif args.train_transform == "TartanAirNoTransform":
+            return TartanAirNoTransform()
         else:
             raise ValueError()
     else:
@@ -300,6 +301,8 @@ class TartanAirNoTransform:
                 transform = self.depth_transform
             elif modality == "seg_left":
                 transform = self.depth_transform
+            elif modality == "flow_mask":
+                transform = self.flow_transform
             else:
                 raise NotImplementedError()
 

@@ -1,11 +1,12 @@
 import argparse
 import distutils
 
-from benchmarker import Benchmarker
 from ffcv.fields.decoders import NDArrayDecoder, SimpleRGBImageDecoder
 from ffcv.loader import Loader
 from ffcv.pipeline.compiler import Compiler
 from ffcv.transforms import ToTensor
+
+from benchmarker import Benchmarker
 from utils_ffcv import get_order_option
 
 Compiler.set_enabled(True)
@@ -48,7 +49,7 @@ def get_parsed_args():
     parser.add_argument(
         "--beton_file",
         type=str,
-        default="/datadrive/localdatasets/tartanair-release1/tartan_abandonedfactory_ratnesh.beton",
+        default="/datadrive/localdatasets/tartanair-release1/tartan_abandonedfactory.beton",
         help="path to beton file",
     )
     parser.add_argument(

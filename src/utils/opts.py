@@ -70,7 +70,7 @@ def parse_args():
         "--train_transform",
         default="TartanAirVideoTransform",
         type=str,
-        choices=["TartanAirVideoTransform", "TartanAirVideoTransformWithAugmentation"],
+        choices=["TartanAirVideoTransform", "TartanAirNoTransform", "TartanAirVideoTransformWithAugmentation"],
     )
     parser.add_argument("--val_transform", default=False, type=bool)
     parser.add_argument("--video_name_keyword", default=None)

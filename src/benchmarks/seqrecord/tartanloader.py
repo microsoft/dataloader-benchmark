@@ -8,9 +8,8 @@ from typing import Dict, List, Optional
 import numpy as np
 import torch
 import torchdata.datapipes as dp
+from src.benchmarks.seqrecord.seqrecord import SeqRecord
 from tqdm import tqdm
-
-from seqrecord import SeqRecord
 
 # todo: pre fetch and shuffle
 # todo: transform (offline, online, to discuss with shuang)
@@ -101,6 +100,7 @@ def test_iter(record, segment_len, dl_config):
         # is this the best way? we should do one-pass to 'small network'
         for key in batch:
             batch[key].cuda()
+        torch.cuda.synchronize()
 
 
 def test_map(record, segment_len, dl_config):
@@ -108,28 +108,33 @@ def test_map(record, segment_len, dl_config):
     dataloader = torch.utils.data.DataLoader(
         dataset,
         batch_size=dl_config["batch_size"],
-        shuffle=True,
+        shuffle=False,
         num_workers=dl_config["num_workers"],
         drop_last=True,
     )
     for batch in tqdm(dataloader):
-        pass
-        # for key in batch:
-        #    batch[key].cuda()
+        for key in batch:
+            batch[key].cuda()
+        torch.cuda.synchronize()
+
+
+def main():
+
+    rootdir = "/datadrive/azure_mounted_data/commondataset2/tartanair-release1/abandonedfactory/records"
+    record = SeqRecord.load_recordobj(rootdir)
+    record.rootdir = rootdir
+    segment_len = 16
+
+    dl_config = {"num_workers": 4, "batch_size": 32, "prefetch_factor": 2}
+    start_iter = perf_counter()
+    test_iter(record, segment_len, dl_config)
+    end_iter = perf_counter()
+    print(f"{end_iter - start_iter =}")
+    # start_map = perf_counter()
+    # test_map(record, segment_len, dl_config)
+    # end_map = perf_counter()
+    # print(f"{end_map - start_map =}")
 
 
 if __name__ == "__main__":
-    # sanity check dataloader
-    rootdir = "/datadrive/azure_mounted_data/commondataset/tartanair-release1/abandonedfactory/records"
-    record = SeqRecord.load_recordobj(rootdir)
-    segment_len = 16
-
-    dl_config = {"num_workers": 0, "batch_size": 8, "prefetch_factor": 2}
-    # start_iter = perf_counter()
-    # test_iter(record, segment_len, dl_config)
-    # end_iter = perf_counter()
-    # print(f"{end_iter - start_iter =}")
-    start_map = perf_counter()
-    test_map(record, segment_len, dl_config)
-    end_map = perf_counter()
-    print(f"{end_map - start_map =}")
+    main()
