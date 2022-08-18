@@ -2,7 +2,7 @@ description: dataloader-benchmark
 
 target:
   service: aml
-  name: V100-1x-ded
+  name: v100-1x
 
 environment:
   registry: commondockerimages.azurecr.io
@@ -23,36 +23,24 @@ storage:
     mount_dir: /mnt/data
     mount_options: ["--file-cache-timeout-in-seconds=0"]
   results:
-    storage_account_name: ramadaanaml
-    container_name: dataloader-benchmark-results
+    storage_account_name: shuhangchen 
+    container_name: amulet
     is_output: True
 
-search:
-  job_template:
-    name: tartanair_ffcv_modalities_image_left_depth_left_flow_flow_seq_len_1_{auto:10s}
-    sku: G1
+jobs:
+  - name: tartanair_ffcv
+    sku: 1xG1
     command:
       - export MKL_THREADING_LAYER="GNU"
       - python src/system_monitor.py --watch_every_n_seconds 1 &
       - python src/benchmarks/tartanair_ffcv.py
         --dataset tartanair
-        --benchmark_results_file /mnt/results/tartanair.csv
-        --beton_file /mnt/data/tartanair-release1/tartan_abandonedfactory_ratnesh.beton
-        --tartanair_ann_file /mnt/data/tartanair-release1/train_ann_debug_ratnesh.json
-        --batch_size 64
-        --num_workers 6
-        --order {order}
-        --os_cache {os_cache}
+        --benchmark_results_file /mnt/results/tartanair_ffcv.csv
+        --beton_file /mnt/data/tartanair-release1/tartan_abandonedfactory_easy.beton
+        --batch_size 32
+        --num_workers 4
+        --order quasi_random
+        --os_cache False
     submit_args:
       container_args:
         shm_size: 640g
-      env: { AZUREML_COMPUTE_USE_COMMON_RUNTIME: True }
-
-  type: grid
-  max_trials: 1000
-  params:
-    - name: order
-      values: choice("random", "quasi_random")
-
-    - name: os_cache
-      values: choice("yes", "no")

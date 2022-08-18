@@ -15,9 +15,11 @@ Compiler.set_enabled(True)
 def get_dataloader(args):
     # Dataset specific
     PIPELINES = {
-        "rgb": [SimpleRGBImageDecoder(), ToTensor()],
+        "rgb": [NDArrayDecoder(), ToTensor()],
         "depth": [NDArrayDecoder(), ToTensor()],
         "flow": [NDArrayDecoder(), ToTensor()],
+        "mask": [NDArrayDecoder(), ToTensor()],
+        "seg": [NDArrayDecoder(), ToTensor()],
     }
 
     order = get_order_option(args.order)
@@ -43,7 +45,7 @@ def benchmark(args):
 
 def get_parsed_args():
     parser = argparse.ArgumentParser(description="FFCV options")
-    parser.add_argument("--benchmark_results_file", default="benchmark_results_tartanair.csv", type=str)
+    parser.add_argument("--benchmark_results_file", default="benchmark_results_tartanair_ffcv.csv", type=str)
 
     parser.add_argument("--dataset", type=str, default="tartanair", help="dataset type to use for benchmarking")
     parser.add_argument(
@@ -67,7 +69,7 @@ def get_parsed_args():
     parser.add_argument("--num_seq", default=1, type=int, help="number of video blocks")
     parser.add_argument(
         "--modalities",
-        default=["image_left", "depth_left", "flow_flow"],
+        default=["image_left", "depth_left", "flow_flow", "seg_left", "flow_mask"],
         help="list of modalities (strings)",
         nargs="+",
         type=str,
