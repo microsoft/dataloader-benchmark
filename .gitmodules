@@ -1,0 +1,4 @@
+[submodule "ffcv"]
+	path = ffcv
+	url = https://github.com/autonomoussystemsresearch/ffcv
+	branch = video
