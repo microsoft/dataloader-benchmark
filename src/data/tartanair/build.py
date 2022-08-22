@@ -50,7 +50,7 @@ def build_loader(args):
         num_workers=args.num_workers,
         pin_memory=args.pin_memory,
         drop_last=True,
-        shuffle=True,
+        shuffle=False,
     )
 
     if not args.use_val:

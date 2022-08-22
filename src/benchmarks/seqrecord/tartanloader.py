@@ -23,13 +23,16 @@ from tqdm import tqdm
 class IterTartanAIRDatapipe(dp.iter.IterDataPipe):
     """A torch datapiple class that iteratively read from record files."""
 
-    def __init__(self, record: SeqRecord, segment_len: int, features: Optional[List[str]]) -> None:
+    def __init__(
+        self, record: SeqRecord, segment_len: int, features: Optional[List[str]], azure_dir: Optional[str] = None
+    ) -> None:
         super().__init__()
         self.segmentproto = record.get_proto4segment(segment_len, features)
         self.record = record
+        self.azure_dir = azure_dir
 
     def __iter__(self):
-        for segment in self.record.read_all_segments(self.segmentproto):
+        for segment in self.record.read_all_segments(self.segmentproto, azure_blob_dir=self.azure_dir):
             yield segment
 
     def __len__(self):
@@ -73,9 +76,9 @@ def list2tensor(data_np: Dict[str, List[np.ndarray]]) -> Dict[str, torch.Tensor]
     return data_torch
 
 
-def build_itertartanair_datapipe(record, segment_len, dl_config):
+def build_itertartanair_datapipe(record, segment_len, dl_config, azure_dir):
 
-    datapipe = IterTartanAIRDatapipe(record, segment_len, features=None)
+    datapipe = IterTartanAIRDatapipe(record, segment_len, None, azure_dir)
     # Shuffle will happen as long as you do NOT set `shuffle=False` later in the DataLoader
     # https://pytorch.org/data/main/tutorial.html#working-with-dataloader
     datapipe = dp.iter.Shuffler(datapipe, buffer_size=100)

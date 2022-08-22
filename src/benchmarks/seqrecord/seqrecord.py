@@ -5,8 +5,10 @@ import collections
 import io
 import os
 import pickle
-from typing import Any, Dict, Generator, List, Optional, Sequence, Tuple, TypeVar, Union
+from typing import (Any, BinaryIO, Dict, Generator, List, Optional, Sequence,
+                    Tuple, TypeVar, Union)
 
+import blobfile as bf
 import numpy as np
 
 SUBFOLDER_NAME = "records"  # subfolder name to stored serialized record data
@@ -15,12 +17,15 @@ MAX_RECORDFILE_SIZE = 1e8  # 1e8, 100 mb, maximum size of a single record file
 # todo: pre transform
 # todo: test read segment with multiple workers: number of overall segments and start_end of each segment
 # and other configs along with bottle necker of torch and other tools
-# skip the first frame in record
 # todo: try file blob
 # todo: test speed difference between os and python level file operation
 # todo: add buffer for reading
 
-SR = TypeVar("R", bound="SeqRecord")
+SR = TypeVar("SR", bound="SeqRecord")
+
+
+def get_azure_url(account: str, container: str) -> str:
+    return f"https://{account}.blob.core.windows.net/{container}/"
 
 
 class SeqRecord:
@@ -43,11 +48,16 @@ class SeqRecord:
         # a cache dict that stores protocal info for each (segment_len, sub features)
         self.segmentproto_cache: Dict[str, dict] = {}
 
-    def recordfile_idx_to_path(self, recordfile_idx: int) -> str:
-        return os.path.join(self.rootdir, f"records_{recordfile_idx}.bin")
+    def recordfile_idx_to_path(self, recordfile_idx: int, azure_blob_dir: Optional[str] = None) -> str:
+        path = None
+        if azure_blob_dir == None:
+            path = os.path.join(self.rootdir, f"records_{recordfile_idx}.bin")
+        else:
+            path = bf.join(azure_blob_dir, f"records_{recordfile_idx}.bin")
+        return path
 
-    def get_recordfiles(self) -> List[str]:
-        return [self.recordfile_idx_to_path(i) for i in range(self.recordfile_idx)]
+    def get_recordfiles(self, azure_blob_dir: Optional[str] = None) -> List[str]:
+        return [self.recordfile_idx_to_path(i, azure_blob_dir) for i in range(self.recordfile_idx)]
 
     def write_item(self, item: Dict[str, np.ndarray], is_seq_start: bool) -> None:
         """write one item data dict(feature->np.ndarray) into bytes and write encoded bytes into current record files.
@@ -62,7 +72,7 @@ class SeqRecord:
         self.idx2recordproto[self.idx] = {
             "item_idx": self.idx,
             "recordfile_idx": self.recordfile_idx,
-            "item_offset": os.lseek(self.recordfile_desc, 0, os.SEEK_CUR),
+            "item_offset": self.byte_count,
             "is_seq_start": is_seq_start,
         }
         buffer = io.BytesIO()
@@ -99,17 +109,19 @@ class SeqRecord:
             self.recordfile_endpoints.append([self.idx])
             os.close(self.recordfile_desc)
             self.recordfile_desc = os.open(
-                self.recordfile_idx_to_path(self.recordfile_idx), flags=os.O_WRONLY | os.O_CREAT
+                self.recordfile_idx_to_path(self.recordfile_idx),
+                flags=os.O_WRONLY | os.O_CREAT,
             )
         elif self.recordfile_desc == None:
             # no opened record file to write into
             self.recordfile_endpoints.append([self.idx])
             self.recordfile_desc = os.open(
-                self.recordfile_idx_to_path(self.recordfile_idx), flags=os.O_WRONLY | os.O_CREAT
+                self.recordfile_idx_to_path(self.recordfile_idx),
+                flags=os.O_WRONLY | os.O_CREAT,
             )
 
     def read_item(
-        self, recordfile_desc: io.BufferedReader, itemproto: Dict[str, Union[int, dict]]
+        self, recordfile_desc: Union[io.BufferedReader, BinaryIO], itemproto: Dict[str, Union[int, dict]]
     ) -> Dict[str, np.ndarray]:
         """Given record file descriptor and serialization proto of a single data item, return the
         decoded dictionary(feature->data(np.ndarray)) of the item.
@@ -135,7 +147,7 @@ class SeqRecord:
         return item
 
     def read_item_frombuffer(
-        self, recordfile_desc: io.BufferedReader, itemproto: Dict[str, Union[int, dict]]
+        self, recordfile_desc: Union[io.BufferedReader, BinaryIO], itemproto: Dict[str, Union[int, dict]]
     ) -> Dict[str, np.ndarray]:
         """Given record file descriptor and serialization proto of a single data item, return the
         decoded dictionary(feature->data(np.ndarray)) of the item, where decoding is done by np.frombuffer()
@@ -242,19 +254,25 @@ class SeqRecord:
         }
         return self.segmentproto_cache[cache_key]
 
-    def read_all_segments(self, segment_proto: dict):
+    def read_all_segments(self, segment_proto: dict, azure_blob_dir: Optional[str] = None):
         """Iterate through the whole records and return segments sequential.
 
         Yields:
             _type_: _description_
         """
+        open_func = bf.BlobFile if azure_blob_dir != None else open
         segment_len = segment_proto["segment_len"]
         for recordfile_idx, item_list in segment_proto["file2segment_items"].items():
-            recordfile_path = self.recordfile_idx_to_path(recordfile_idx)
+            recordfile_path = self.recordfile_idx_to_path(recordfile_idx, azure_blob_dir)
             q = collections.deque()
-            with open(recordfile_path, mode="rb") as f:
+            with open_func(recordfile_path, mode="rb", buffer_size=) as f:
                 for is_segment_start, item_idx in item_list:
-                    q.append((is_segment_start, self.read_item(f, self.idx2recordproto[item_idx])))
+                    q.append(
+                        (
+                            is_segment_start,
+                            self.read_item_frombuffer(f, self.idx2recordproto[item_idx]),
+                        )
+                    )
                     while not q[0][0]:
                         q.popleft()
                     if len(q) == segment_len:
@@ -279,7 +297,12 @@ class SeqRecord:
         q = []
         with open(recordfile_path, mode="rb") as f:
             for idx in range(head_idx, head_idx + segment_len):
-                q.append((idx == head_idx, self.read_item_frombuffer(f, self.idx2recordproto[idx])))
+                q.append(
+                    (
+                        idx == head_idx,
+                        self.read_item_frombuffer(f, self.idx2recordproto[idx]),
+                    )
+                )
         return self.collate_items(q)
 
     def collate_items(self, q: Sequence[Tuple[bool, dict]]) -> Dict[str, List[np.ndarray]]:
@@ -293,22 +316,36 @@ class SeqRecord:
         self.recordfile_endpoints[-1].append(self.idx - 1)
         self.recordfile_idx += 1
         os.close(self.recordfile_desc)
+        self.recordfile_desc = None
 
     def dump(self) -> None:
-        """save instance of record"""
-        with open(os.path.join(self.rootdir, "recordproto.bin"), mode="wb") as f:
-            pickle.dump(self, file=f)
+        """save attributes of instance of record into a file
+
+        Note:
+        saving attribute dict instead of pickled class: pickling class and loading it is a mess because of
+        path issues.
+        """
+        with open(os.path.join(self.rootdir, "record.dict"), mode="wb") as f:
+            pickle.dump(self.__dict__, file=f)
 
     @classmethod
-    def load_recordobj(cls, rootdir: str) -> SR:
-        """return an instance of sequence record from file (stored at path).
+    def load_record_from_dict(cls, rootdir: str, is_azure_blob_dir: Optional[bool] = None) -> SR:
+        """return an instance of sequence record from file that stores attributes of record
+        as a dict (stored at path).
 
         Args:
-            path (str): path to the file that stores pickled record
+            path (str): path to the file that stores dict of attributes of seqrecord
 
         Returns:
-            R: an instance of record
+            SR: an instance of record
         """
-        with open(os.path.join(rootdir, "recordproto.bin"), mode="rb") as f:
-            obj = pickle.load(f)
+        open_func = bf.BlobFile if is_azure_blob_dir else open
+        file_path = bf.join(rootdir, "record.dict") if is_azure_blob_dir else os.path.join(rootdir, "record.dict")
+        with open_func(file_path, mode="rb") as f:
+            obj_dict = pickle.load(f)
+        obj = cls(rootdir=obj_dict["rootdir"], features=obj_dict["features"])
+        obj_dict.pop("rootdir", None)
+        obj_dict.pop("features", None)
+        for key, value in obj_dict.items():
+            setattr(obj, key, value)
         return obj
