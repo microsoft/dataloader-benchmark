@@ -3,11 +3,11 @@ import argparse
 from ffcv.fields.decoders import NDArrayDecoder
 from ffcv.loader import Loader
 from ffcv.transforms import ToTensor
-from utils_ffcv import get_order_option
 
 from src.benchmarks.benchmarker import Benchmarker
 from src.benchmarks.climate.climate_opts import add_climate_args
 from src.benchmarks.common_opts import add_common_args, add_ffcv_args
+from src.benchmarks.utils_ffcv import get_order_option
 
 
 def get_dataloader(args):
