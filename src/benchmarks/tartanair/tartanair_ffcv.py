@@ -1,15 +1,14 @@
 import argparse
-from distutils.util import strtobool
 
 from ffcv.fields.decoders import NDArrayDecoder, SimpleRGBImageDecoder
 from ffcv.loader import Loader
 from ffcv.pipeline.compiler import Compiler
 from ffcv.transforms import ToTensor
-from tartanair_ops import get_tartanair_args
 from utils_ffcv import get_order_option
 
 from src.benchmarks.benchmarker import Benchmarker
-from src.benchmarks.common_opts import get_common_args
+from src.benchmarks.common_opts import add_common_args, add_ffcv_args
+from src.benchmarks.tartanair.tartanair_opts import add_tartanair_args
 
 Compiler.set_enabled(True)
 
@@ -43,30 +42,17 @@ def benchmark(args):
     benchmarker.benchmark_tartanair(args)
 
 
-def get_ffcv_args():
-    parser = argparse.ArgumentParser(description="FFCV options")
-    parser.add_argument(
-        "--beton_file",
-        type=str,
-        default="/datadrive/localdatasets/tartanair-release1/tartan_abandonedfactory_ratnesh.beton",
-        help="path to beton file",
-    )
-    parser.add_argument("--order", type=str, default="random", help="Ordering of data: random or quasi_random")
-    parser.add_argument("--os_cache", type=lambda x: bool(strtobool(x)))
-    args = parser.parse_args()
-    return args
-
-
 def main(args):
     benchmark(args)
 
 
 if __name__ == "__main__":
-    args = get_common_args()
-    tartanair_args = get_tartanair_args()
-    ffcv_args = get_ffcv_args()
+    parser = argparse.ArgumentParser()
 
-    args.__dict__.update(tartanair_args.__dict__)
-    args.__dict__.update(ffcv_args.__dict__)
+    add_common_args(parser.add_argument_group(title="common args"))
+    add_tartanair_args(parser.add_argument_group(title="tartanair args"))
+    add_ffcv_args(parser.add_argument_group(title="ffcv args"))
+
+    args = parser.parse_args()
 
     main(args)

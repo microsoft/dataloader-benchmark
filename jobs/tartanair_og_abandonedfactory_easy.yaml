@@ -28,19 +28,21 @@ storage:
 
 search:
   job_template:
-    name: tartanair_og_{auto:10s}
+    name: tartanair_{auto:10s}
+    # name: tartanair_cuda_sync_{auto:10s}
     sku: G1
     command:
       - python src/system_monitor.py --watch_every_n_seconds 1 &
       - python src/benchmarks/tartanair/tartanair_og.py
-        --train_ann_file /mnt/data/tartanair-release1/train_ann_debug_ratnesh.json
-        --benchmark_results_file /mnt/results/tartanair.csv
-        --batch_size 64
-        --num_workers 6
-        --num_seq 1
-        --modalities {modalities}
+        --train_ann_file /mnt/data/tartanair-release1/train_ann_abandonedfactory_easy.json
+        --benchmark_results_file /mnt/results/abandonedfactory_easy.csv
+        --batch_size {batch_size}
+        --num_workers {num_workers}
+        --num_seq {num_seq}
         --seq_len {seq_len}
-        --train_transform TartanAirVideoTransform
+        --modalities {modalities}
+        --train_transform {train_transform}
+        --verbose yes
     submit_args:
       container_args:
         shm_size: 640g
@@ -49,8 +51,21 @@ search:
   type: grid
   max_trials: 1000
   params:
-    - name: modalities
-      values: choice("image_left", "depth_left")
+    - name: num_workers
+      values: choice(4, 6)
+
+    - name: batch_size
+      values: choice(32)
+
+    - name: num_seq
+      values: choice(1)
 
     - name: seq_len
-      values: choice(1, 16)
+      values: choice(16)
+
+    - name: modalities
+      values: choice("image_left depth_left seg_left flow_mask flow_flow")
+
+    - name: train_transform
+      values: choice("TartanAirNoTransform")
+      # values: choice("TartanAirNoTransform", "TartanAirVideoTransform", "TartanAirVideoTransformWithAugmentation")

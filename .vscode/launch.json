@@ -13,7 +13,7 @@
             "justMyCode": true
         },
         {
-            "name": "Python: benchmark_debug_1",
+            "name": "benchmark_debug_1",
             "type": "python",
             "request": "launch",
             "program": "src/benchmarks/tartanair_og.py",
@@ -38,6 +38,34 @@
                 "16",
                 "--train_transform",
                 "TartanAirVideoTransform"
+            ]
+        },
+        {
+            "name": "tartanair_og",
+            "type": "python",
+            "request": "launch",
+            "program": "src/benchmarks/tartanair/tartanair_og.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--train_ann_file",
+                "/datadrive/localdatasets/tartanair-release1/train_ann_debug_ratnesh.json",
+                "--benchmark_results_file",
+                "abandonedfactory_easy.csv",
+                "--batch_size",
+                "32",
+                "--num_workers",
+                "16",
+                "--num_seq",
+                "1",
+                "--seq_len",
+                "16",
+                "--modalities",
+                "image_left","depth_left","seg_left","flow_mask","flow_flow",
+                "--train_transform",
+                "TartanAirNoTransform",
+                "--verbose",
+                "yes"
             ]
         }
     ]

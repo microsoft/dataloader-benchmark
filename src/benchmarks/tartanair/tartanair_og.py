@@ -1,7 +1,9 @@
-from tartanair_ops import get_tartanair_args
+import argparse
+from timeit import default_timer as timer
 
 from src.benchmarks.benchmarker import Benchmarker
-from src.benchmarks.common_opts import get_common_args
+from src.benchmarks.common_opts import add_common_args
+from src.benchmarks.tartanair.tartanair_opts import add_tartanair_args
 from src.data.tartanair import build_loader
 
 
@@ -11,8 +13,9 @@ def get_dataloader(args):
 
 
 def benchmark(args):
+    init_time = timer()
     dataloader = get_dataloader(args)
-    benchmarker = Benchmarker(verbose=args.verbose, library="pytorch", dataset="tartanair")
+    benchmarker = Benchmarker(verbose=args.verbose, library="pytorch", dataset="tartanair", init_time=init_time)
     benchmarker.set_dataloader(dataloader)
     benchmarker.benchmark_tartanair(args)
 
@@ -22,9 +25,13 @@ def main(args):
 
 
 if __name__ == "__main__":
-    args = get_common_args()
-    tartanair_args = get_tartanair_args()
+    parser = argparse.ArgumentParser()
+    common_group = parser.add_argument_group(title="common params")
+    tartanair_group = parser.add_argument_group(title="tartanair params")
 
-    args.__dict__.update(tartanair_args.__dict__)
+    add_common_args(common_group)
+    add_tartanair_args(tartanair_group)
+
+    args = parser.parse_args()
 
     main(args)

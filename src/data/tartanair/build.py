@@ -15,8 +15,8 @@ from timm.data import create_transform
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from torchvision import transforms
 
-from .tartanair_video import TartanAirVideoDataset
-from .utils import ResizeFlowNP
+from src.data.tartanair.tartanair_video import TartanAirVideoDataset
+from src.data.tartanair.utils import ResizeFlowNP
 
 try:
     from torchvision.transforms import InterpolationMode
@@ -288,24 +288,12 @@ class TartanAirNoTransform:
                 transforms.ToTensor(),
             ]
         )
-        self.flow_transform = self.image_transform
-        self.depth_transform = self.image_transform
 
     def __call__(self, item):
         transformed_item = {}
         for modality in item:
             # TODO: We need to support multiple data types in sub-transforms (e.g. CenterCrop / Resize) for code refactoring.
-            if modality == "image_left":
-                transform = self.image_transform
-            elif modality == "flow_flow":
-                transform = self.flow_transform
-            elif modality == "depth_left":
-                transform = self.depth_transform
-            elif modality == "seg_left":
-                transform = self.depth_transform
-            else:
-                raise NotImplementedError()
-
+            transform = self.image_transform
             stacked_data = torch.stack([transform(x) for x in item[modality]], dim=1)
             transformed_item[modality] = stacked_data
 

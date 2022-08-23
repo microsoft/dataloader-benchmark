@@ -31,7 +31,8 @@ search:
     name: climate_{auto:10s}
     sku: G1
     command:
-      - python src/benchmarks/climate_pytorch.py
+      - python src/system_monitor.py --watch_every_n_seconds 1 &
+      - python src/benchmarks/climate/climate_pytorch.py
         {data}
         --benchmark_results_file /mnt/results/climate.csv
         --batch_size {batch_size}

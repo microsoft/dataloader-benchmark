@@ -1,14 +1,15 @@
+import argparse
 import glob
 import os
 
 import numpy as np
 import torch
 import torchdata.datapipes as dp
-from climate_ops import get_climate_args
 from torch.utils.data import DataLoader
 
 from src.benchmarks.benchmarker import Benchmarker
-from src.benchmarks.common_opts import get_common_args
+from src.benchmarks.climate.climate_opts import add_climate_args
+from src.benchmarks.common_opts import add_common_args
 from src.data.climate.era5_datapipe import (
     ERA5,
     ERA5Forecast,
@@ -79,15 +80,15 @@ def get_datapipe(path, batchsize=32, use="forecast", dataformat="npy"):
 
 
 def get_dataloader(args):
-    print(f"Dataset: {args.dataset}\n \t {args.data_dir}")
-    data = get_datapipe(args.data_dir, args.batch_size, args.use, args.dataset)
+    print(f"Dataset: {args.use}\n \t {args.data_dir}")
+    data = get_datapipe(args.data_dir, args.batch_size, args.use)
     dataloader = DataLoader(data, batch_size=None, num_workers=args.num_workers)
     return dataloader
 
 
 def benchmark(args):
     dataloader = get_dataloader(args)
-    benchmarker = Benchmarker(verbose=args.verbose, dataset=f"climate_{args.use}", library="pytorch")
+    benchmarker = Benchmarker(verbose=args.verbose, dataset="climate", library="pytorch")
     benchmarker.set_dataloader(dataloader)
     benchmarker.benchmark_climate(args)
 
@@ -97,9 +98,10 @@ def main(args):
 
 
 if __name__ == "__main__":
-    args = get_common_args()
-    climate_args = get_climate_args()
+    parser = argparse.ArgumentParser()
 
-    args.__dict__.update(climate_args.__dict__)
+    add_common_args(parser.add_argument_group("common args"))
+    add_climate_args(parser.add_argument_group("climate args"))
 
+    args = parser.parse_args()
     main(args)

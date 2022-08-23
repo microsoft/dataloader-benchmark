@@ -33,7 +33,7 @@ jobs:
     command:
       - export MKL_THREADING_LAYER="GNU"
       - python src/system_monitor.py --watch_every_n_seconds 1 &
-      - python src/benchmarks/climate_dali_npy.py
+      - python src/benchmarks/climate/climate_dali_npy.py
         --benchmark_results_file /mnt/results/climate.csv
         --batch_size 32
         --data_dir /mnt/data/1.40625deg_monthly_np/train

@@ -6,10 +6,11 @@ import mlflow
 
 
 class Benchmarker:
-    def __init__(self, verbose=False, dataset="tartanair", library="pytorch"):
+    def __init__(self, verbose=False, dataset="tartanair", library="pytorch", init_time=0.0):
         self.verbose = verbose
         self.dataset = dataset
         self.library = library
+        self.init_time = init_time  # start time before calling dataloader
 
         self.datasets_list = ["tartanair", "climate", "mushr"]
         self.library_list = ["pytorch", "ffcv", "dali"]
@@ -34,6 +35,7 @@ class Benchmarker:
         self.common_metrics_list = [
             "time_per_batch_without_first",
             "time_per_batch_with_first",
+            "data_prep_time",
             "time_first_batch",
             "time_copy_per_batch",
         ]
@@ -145,6 +147,7 @@ class Benchmarker:
             if self.library == "dali":
                 batch[0]["data"].cuda()  # already on cuda, image_left only
 
+            # torch.cuda.synchronize()
             time_copy = time_copy + (timer() - start_copy)
 
             if batch_idx == 0:
@@ -157,6 +160,7 @@ class Benchmarker:
 
         last = timer()
 
+        data_prep_time = start - self.init_time
         time_first_batch = first - start
         time_per_batch_with_first = (last - start) / num_batches
         time_per_batch_without_first = (last - first) / (num_batches - 1)
@@ -167,6 +171,7 @@ class Benchmarker:
         self.params["batch_size"] = args.batch_size
         self.metrics["time_per_batch_without_first"] = round(time_per_batch_without_first, 3)
         self.metrics["time_per_batch_with_first"] = round(time_per_batch_with_first, 3)
+        self.metrics["data_prep_time"] = round(data_prep_time, 3)
         self.metrics["time_first_batch"] = round(time_first_batch, 3)
         self.metrics["time_copy_per_batch"] = round(time_copy_per_batch, 3)
 
@@ -206,6 +211,7 @@ class Benchmarker:
 
         last = timer()
 
+        data_prep_time = start - self.init_time
         time_first_batch = first - start
         time_per_batch_with_first = (last - start) / num_batches
         time_per_batch_without_first = (last - first) / (num_batches - 1)
@@ -216,6 +222,7 @@ class Benchmarker:
         self.params["batch_size"] = args.batch_size
         self.metrics["time_per_batch_without_first"] = round(time_per_batch_without_first, 3)
         self.metrics["time_per_batch_with_first"] = round(time_per_batch_with_first, 3)
+        self.metrics["data_prep_time"] = round(data_prep_time, 3)
         self.metrics["time_first_batch"] = round(time_first_batch, 3)
         self.metrics["time_copy_per_batch"] = round(time_copy_per_batch, 3)
 
@@ -249,6 +256,7 @@ class Benchmarker:
         last = timer()
 
         time_copy_per_batch = time_copy / num_batches
+        data_prep_time = start - self.init_time
         time_first_batch = first - start
         time_per_batch_with_first = (last - start) / num_batches
         time_per_batch_without_first = (last - first) / (num_batches - 1)
@@ -258,6 +266,7 @@ class Benchmarker:
         self.params["batch_size"] = args.batch_size
         self.metrics["time_per_batch_without_first"] = round(time_per_batch_without_first, 3)
         self.metrics["time_per_batch_with_first"] = round(time_per_batch_with_first, 3)
+        self.metrics["data_prep_time"] = round(data_prep_time, 3)
         self.metrics["time_first_batch"] = round(time_first_batch, 3)
         self.metrics["time_copy_per_batch"] = round(time_copy_per_batch, 3)
 
@@ -291,6 +300,7 @@ class Benchmarker:
         last = timer()
 
         time_copy_per_batch = time_copy / num_batches
+        data_prep_time = start - self.init_time
         time_first_batch = first - start
         time_per_batch_with_first = (last - start) / num_batches
         time_per_batch_without_first = (last - first) / (num_batches - 1)
@@ -300,6 +310,7 @@ class Benchmarker:
         self.params["batch_size"] = args.batch_size
         self.metrics["time_per_batch_without_first"] = round(time_per_batch_without_first, 3)
         self.metrics["time_per_batch_with_first"] = round(time_per_batch_with_first, 3)
+        self.metrics["data_prep_time"] = round(data_prep_time, 3)
         self.metrics["time_first_batch"] = round(time_first_batch, 3)
         self.metrics["time_copy_per_batch"] = round(time_copy_per_batch, 3)
 
