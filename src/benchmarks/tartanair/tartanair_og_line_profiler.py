@@ -1,5 +1,8 @@
+import argparse
+
+from src.benchmarks.common_opts import add_common_args
+from src.benchmarks.tartanair.tartanair_opts import add_tartanair_args
 from src.data.tartanair import build_loader
-from src.utils.opts import parse_args
 
 
 def get_dataloader(args):
@@ -45,6 +48,11 @@ def cprofile(args):
 
 
 if __name__ == "__main__":
-    args = parse_args()
+    parser = argparse.ArgumentParser()
+
+    add_common_args(parser.add_argument_group(title="common args"))
+    add_tartanair_args(parser.add_argument_group(title="tartanair args"))
+
+    args = parser.parse_args()
+
     main(args)
-    cprofile(args)

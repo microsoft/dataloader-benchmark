@@ -33,7 +33,7 @@ jobs:
     command:
       - export MKL_THREADING_LAYER="GNU"
       - python src/system_monitor.py --watch_every_n_seconds 1 &
-      - python src/benchmarks/tartanair_ffcv.py
+      - python src/benchmarks/tartanair/tartanair_ffcv.py
         --dataset tartanair
         --benchmark_results_file /mnt/results/tartanair_ffcv.csv
         --beton_file /mnt/data/tartanair-release1/tartan_abandonedfactory_easy.beton

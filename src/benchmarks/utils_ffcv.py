@@ -1,7 +1,7 @@
-from ffcv.loader import OrderOption
+from ffcv.loader import ORDER_TYPE, OrderOption
 
 
-def get_order_option(order):
+def get_order_option(order: str) -> ORDER_TYPE:
     if order == "random":
         order_option = OrderOption.RANDOM
     elif order == "quasi_random":

@@ -1,11 +1,13 @@
 import argparse
-import distutils
 
-from benchmarker import Benchmarker
 from ffcv.fields.decoders import NDArrayDecoder
 from ffcv.loader import Loader
 from ffcv.transforms import ToTensor
 from utils_ffcv import get_order_option
+
+from src.benchmarks.benchmarker import Benchmarker
+from src.benchmarks.climate.climate_opts import add_climate_args
+from src.benchmarks.common_opts import add_common_args, add_ffcv_args
 
 
 def get_dataloader(args):
@@ -37,24 +39,9 @@ def get_dataloader(args):
 
 def benchmark(args):
     dataloader = get_dataloader(args)
-    benchmarker = Benchmarker(verbose=args.verbose, dataset=f"climate_{args.use}", library="ffcv")
+    benchmarker = Benchmarker(verbose=args.verbose, dataset="climate", library="ffcv")
     benchmarker.set_dataloader(dataloader)
     benchmarker.benchmark_tartanair(args)
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(description="FFCV options")
-    parser.add_argument("--verbose", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
-    parser.add_argument("--benchmark_results_file", default="benchmark_results_climate.csv", type=str)
-    parser.add_argument("--beton_file", type=str, help="Dataset to use for benchmarking")
-    parser.add_argument("--order", type=str, default="random", help="Ordering of data: random or quasi_random")
-    parser.add_argument("--os_cache", type=lambda x: bool(distutils.util.strtobool(x)))
-    parser.add_argument("--batch_size", type=int, default=32, help="Batch size")
-    parser.add_argument("--num_workers", type=int, default=1, help="Number of workers")
-    parser.add_argument("--use", type=str, default="forecast", help="Use forecast or pretrain")
-    args = parser.parse_args()
-
-    return args
 
 
 def main(args):
@@ -62,5 +49,11 @@ def main(args):
 
 
 if __name__ == "__main__":
-    args = parse_args()
+    parser = argparse.ArgumentParser()
+
+    add_common_args(parser.add_argument_group("common args"))
+    add_climate_args(parser.add_argument_group("climate args"))
+    add_ffcv_args(parser.add_argument_group("ffcv args"))
+
+    args = parser.parse_args()
     main(args)

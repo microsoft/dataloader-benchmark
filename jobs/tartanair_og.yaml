@@ -33,8 +33,9 @@ jobs:
       container_args:
         shm_size: 640g
     command:
-      - python src/benchmarks/tartanair_og.py
-        --train_ann_file /mnt/data/tartanair-release1/train_ann_abandonedfactory_easy.json
+      - python src/system_monitor.py --watch_every_n_seconds 1 &
+      - python src/benchmarks/tartanair/tartanair_og.py
+        --train_ann_file /mnt/data/tartanair-release1/train_ann_debug_ratnesh.json
         --benchmark_results_file /mnt/results/tartanair.csv
         --batch_size 32
         --num_workers 4

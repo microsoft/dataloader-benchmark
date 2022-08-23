@@ -14,7 +14,7 @@ import torch.distributed as dist
 import torch.utils.data as data
 from PIL import Image
 
-from .zipreader import ZipReader, is_zip_path
+from src.data.tartanair.zipreader import ZipReader, is_zip_path
 
 
 def has_file_allowed_extension(filename, extensions):

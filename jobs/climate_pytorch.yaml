@@ -31,7 +31,8 @@ search:
     name: climate_{auto:10s}
     sku: G1
     command:
-      - python src/benchmarks/climate_pytorch.py
+      - python src/system_monitor.py --watch_every_n_seconds 1 &
+      - python src/benchmarks/climate/climate_pytorch.py
         {data}
         --benchmark_results_file /mnt/results/climate.csv
         --batch_size {batch_size}
@@ -59,6 +60,6 @@ search:
       spec: discrete
       values:
         [
-          "--dataset npy --datapath /mnt/data/1.40625deg_yearly_np/val",
-          "--dataset zarr --datapath /mnt/data/1.40625deg_yearly/val",
+          "--dataset_type npy --data_dir /mnt/data/1.40625deg_yearly_np/val",
+          "--dataset_type zarr --data_dir /mnt/data/1.40625deg_yearly/val",
         ]

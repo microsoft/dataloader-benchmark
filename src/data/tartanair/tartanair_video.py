@@ -7,7 +7,7 @@ import numpy as np
 import torch.utils.data as data
 from PIL import Image
 
-from .zipreader import ZipReader, is_zip_path
+from src.data.tartanair.zipreader import ZipReader, is_zip_path
 
 
 class TubeMaskingGenerator:
@@ -173,7 +173,10 @@ class TartanAirVideoDataset(data.Dataset):
                 else:
                     raise ValueError()
 
-                item[modality].append(data)
+                if self.is_write_to_ffcv_beton:
+                    item[modality] = data
+                else:
+                    item[modality].append(data)
 
         if self.is_write_to_ffcv_beton:
             for modality in item:

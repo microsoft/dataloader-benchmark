@@ -119,7 +119,7 @@ stages:
 
       - job: BuildDockerAzureMLBaseAndCondaFfcv
         dependsOn: DefineDockerTags
-        displayName: docker build azureml base
+        displayName: docker build azureml ffcv base
         pool:
           vmImage: $(vmImageName)
         variables:

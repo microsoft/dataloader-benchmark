@@ -33,7 +33,7 @@ jobs:
     command:
       - export MKL_THREADING_LAYER="GNU"
       - python src/system_monitor.py --watch_every_n_seconds 1 &
-      - python src/benchmarks/tartanair_dali.py
+      - python src/benchmarks/tartanair/tartanair_dali.py
         --benchmark_results_file /mnt/results/tartanair.csv
         --batch_size 64
         --image_dir /mnt/data/tartanair-release1-dali/abandonedfactory/Easy/P000/
@@ -48,7 +48,7 @@ jobs:
     command:
       - export MKL_THREADING_LAYER="GNU"
       - python src/system_monitor.py --watch_every_n_seconds 1 &
-      - python src/benchmarks/tartanair_dali_sequence.py
+      - python src/benchmarks/tartanair/tartanair_dali_sequence.py
         --benchmark_results_file /mnt/results/tartanair.csv
         --batch_size 64
         --sequence_length 16
@@ -64,7 +64,7 @@ jobs:
     command:
       - export MKL_THREADING_LAYER="GNU"
       - python src/system_monitor.py --watch_every_n_seconds 1 &
-      - python src/benchmarks/tartanair_dali_npy.py
+      - python src/benchmarks/tartanair/tartanair_dali_npy.py
         --benchmark_results_file /mnt/results/tartanair.csv
         --batch_size 64
         --is_amlt yes
@@ -77,8 +77,8 @@ jobs:
   # - name: tartanair_dali_modalities_rgb_separate_dir
   #   sku: G1
   #   command:
-  #     - python src/benchmarks/azure_monitor.py &
-  #     - python src/benchmarks/tartanair_dali.py
+  #     - python src/system_monitor.py --watch_every_n_seconds 1 &
+  #     - python src/benchmarks/tartanair/tartanair_dali.py
   #       --benchmark_results_file /mnt/results/tartanair.csv
   #       --batch_size 64
   #       --image_dir /mnt/data/tartanair-release1-dali/abandonedfactory/Easy/P000/
@@ -91,8 +91,8 @@ jobs:
   # - name: tartanair_dali_modalities_npy_depth_separate_dir
   #   sku: G1
   #   command:
-  #     - python src/benchmarks/azure_monitor.py &
-  #     - python src/benchmarks/tartanair_dali_npy.py
+  #     - python src/system_monitor.py --watch_every_n_seconds 1 &
+  #     - python src/benchmarks/tartanair/tartanair_dali_npy.py
   #       --benchmark_results_file /mnt/results/tartanair.csv
   #       --batch_size 64
   #       --is_amlt yes
