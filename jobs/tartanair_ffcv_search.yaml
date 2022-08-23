@@ -27,22 +27,33 @@ storage:
     container_name: dataloader-benchmark-results
     is_output: True
 
-jobs:
-  - name: tartanair_ffcv
-    sku: 1xG1
+search:
+  job_template:
+    name: tartanair_ffcv_modalities_image_left_depth_left_flow_flow_seq_len_1_{auto:10s}
+    sku: G1
     command:
       - export MKL_THREADING_LAYER="GNU"
       - python src/system_monitor.py --watch_every_n_seconds 1 &
       - python src/benchmarks/tartanair/tartanair_ffcv.py
         --dataset tartanair
         --modalities image_left depth_left flow_flow flow_mask seg_left 
-        --benchmark_results_file /mnt/results/tartanair_ffcv.csv
-        --beton_file /mnt/data/tartanair-release1/tartan_abandonedfactory_easy.beton
-        --batch_size 32
-        --num_workers 4
-        --order quasi_random
-        --os_cache False
-
+        --benchmark_results_file /mnt/results/tartanair.csv
+        --beton_file /mnt/data/tartanair-release1/tartan_abandonedfactory_ratnesh.beton
+        --tartanair_ann_file /mnt/data/tartanair-release1/train_ann_debug_ratnesh.json
+        --batch_size 64
+        --num_workers 6
+        --order {order}
+        --os_cache {os_cache}
     submit_args:
       container_args:
         shm_size: 640g
+      env: { AZUREML_COMPUTE_USE_COMMON_RUNTIME: True }
+
+  type: grid
+  max_trials: 1000
+  params:
+    - name: order
+      values: choice("random", "quasi_random")
+
+    - name: os_cache
+      values: choice("yes", "no")
