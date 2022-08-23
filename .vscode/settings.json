@@ -25,6 +25,5 @@
     "isort.args": [
         "--profile",
         "black"
-    ],
-    "python.pythonPath": "/datadrive/anaconda3/envs/dataloader-benchmark/bin/python",
+    ]
 }
