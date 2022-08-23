@@ -35,7 +35,7 @@ class Test_SeqRecord(unittest.TestCase):
         for i, item in enumerate(record.read_record()):
             for feature in features:
                 nptest.assert_equal(item[feature], dataset[i][feature], err_msg="", verbose=True)
-        loaded_record = SeqRecord.load_record_from_dict("/home/azureuser/data/data4record/records", False)
+        loaded_record = SeqRecord.load_record_from_dict("/home/azureuser/data/data4record/records")
 
     def test_idx4segment(self):
         """Having the record written (and various attributes setup), generate an index mapping for specific segment len."""

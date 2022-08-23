@@ -2,6 +2,8 @@
 """
 
 
+import os
+from random import shuffle
 from time import perf_counter
 from typing import Dict, List, Optional
 
@@ -23,30 +25,27 @@ from tqdm import tqdm
 class IterTartanAIRDatapipe(dp.iter.IterDataPipe):
     """A torch datapiple class that iteratively read from record files."""
 
-    def __init__(
-        self, record: SeqRecord, segment_len: int, features: Optional[List[str]], azure_dir: Optional[str] = None
-    ) -> None:
+    def __init__(self, record: SeqRecord, segment_len: int, features: Optional[List[str]]) -> None:
         super().__init__()
         self.segmentproto = record.get_proto4segment(segment_len, features)
         self.record = record
-        self.azure_dir = azure_dir
 
     def __iter__(self):
-        for segment in self.record.read_all_segments(self.segmentproto, azure_blob_dir=self.azure_dir):
+        for segment in self.record.read_all_segments(self.segmentproto):
             yield segment
 
     def __len__(self):
         return len(self.segmentproto["head4segment"])
 
 
-class MapTartanAIRDataset(torch.utils.data.Dataset):
+class MapTartanAIRDatapipe(dp.map.MapDataPipe):
     def __init__(self, record: SeqRecord, segment_len: int, features: Optional[List[str]]) -> None:
         super().__init__()
         self.segmentproto = record.get_proto4segment(segment_len, features)
         self.record = record
 
-    def __getitem__(self, index: int) -> Dict[str, torch.Tensor]:
-        head_idx = self.segmentproto["head4segment"][index]
+    def __getitm__(self, idx: int) -> Dict[str, np.ndarray]:
+        head_idx = self.segmentproto["head4segment"][idx]
         item = self.record.read_one_segment(self.segmentproto["segment_len"], head_idx)
         return list2tensor(item)
 
@@ -54,31 +53,31 @@ class MapTartanAIRDataset(torch.utils.data.Dataset):
         return len(self.segmentproto["head4segment"])
 
 
-def collate_fn(batch: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
+def collate_fn(batch: List[Dict[str, np.ndarray]]) -> Dict[str, torch.Tensor]:
     collated_batch = {}
     for feature in batch[0]:
-        collated_batch[feature] = torch.stack([batch[i][feature] for i in range(len(batch))], axis=0)
+        collated_batch[feature] = torch.from_numpy(np.stack([batch[i][feature] for i in range(len(batch))], axis=0))
     return collated_batch
 
 
-def list2tensor(data_np: Dict[str, List[np.ndarray]]) -> Dict[str, torch.Tensor]:
-    """transform data from list of np.array to torch tensor
+def list2tensor(data_np: Dict[str, List[np.ndarray]]) -> Dict[str, np.ndarray]:
+    """transform data from list of np.array to a single numpy array
 
     Args:
         data_np (Dict[str, List[np.ndarray]]): _description_
 
     Returns:
-        Dict[str, torch.Tensor]: _description_
+        Dict[str, np.ndarray]: _description_
     """
-    data_torch: Dict[str, torch.Tensor] = {}
+    data_torch: Dict[str, np.ndarray] = {}
     for feature in data_np:
-        data_torch[feature] = torch.from_numpy(np.stack(data_np[feature], axis=0))
+        data_torch[feature] = np.stack(data_np[feature], axis=0)
     return data_torch
 
 
-def build_itertartanair_datapipe(record, segment_len, dl_config, azure_dir):
+def build_itertartanair_datapipe(record, segment_len, dl_config):
 
-    datapipe = IterTartanAIRDatapipe(record, segment_len, None, azure_dir)
+    datapipe = IterTartanAIRDatapipe(record, segment_len, None)
     # Shuffle will happen as long as you do NOT set `shuffle=False` later in the DataLoader
     # https://pytorch.org/data/main/tutorial.html#working-with-dataloader
     datapipe = dp.iter.Shuffler(datapipe, buffer_size=100)
@@ -90,7 +89,15 @@ def build_itertartanair_datapipe(record, segment_len, dl_config, azure_dir):
     # your samples will be batched more than once. You should choose one or the other.
     # https://pytorch.org/data/main/tutorial.html#working-with-dataloader
     datapipe = dp.iter.Batcher(datapipe, batch_size=dl_config["batch_size"], drop_last=True)
-    datapipe = dp.iter.Collator(datapipe)
+    datapipe = dp.iter.Collator(datapipe, collate_fn=collate_fn)
+    return datapipe
+
+
+def build_maptartanair_datapipe(record, segment_len, dl_config):
+    datapipe = MapTartanAIRDatapipe(record, segment_len, None)
+    datapipe = dp.map.Shuffler(datapipe)
+    datapipe = dp.map.Batcher(datapipe, batch_size=dl_config["batch_size"])
+    datapipe = dp.map.Mapper(datapipe, fn=collate_fn)
     return datapipe
 
 
@@ -107,11 +114,11 @@ def test_iter(record, segment_len, dl_config):
 
 
 def test_map(record, segment_len, dl_config):
-    dataset = MapTartanAIRDataset(record, segment_len, features=None)
+    dataset = MapTartanAIRDatapipe(record, segment_len, features=None)
     dataloader = torch.utils.data.DataLoader(
         dataset,
         batch_size=dl_config["batch_size"],
-        shuffle=False,
+        shuffle=True,
         num_workers=dl_config["num_workers"],
         drop_last=True,
     )
@@ -121,23 +128,15 @@ def test_map(record, segment_len, dl_config):
         torch.cuda.synchronize()
 
 
-def main():
+if __name__ == "__main__":
 
     rootdir = "/datadrive/azure_mounted_data/commondataset2/tartanair-release1/abandonedfactory/records"
-    record = SeqRecord.load_recordobj(rootdir)
+    record = SeqRecord.load_record_from_dict(rootdir)
     record.rootdir = rootdir
     segment_len = 16
 
-    dl_config = {"num_workers": 4, "batch_size": 32, "prefetch_factor": 2}
+    dl_config = {"num_workers": 0, "batch_size": 32, "prefetch_factor": 2}
     start_iter = perf_counter()
     test_iter(record, segment_len, dl_config)
     end_iter = perf_counter()
     print(f"{end_iter - start_iter =}")
-    # start_map = perf_counter()
-    # test_map(record, segment_len, dl_config)
-    # end_map = perf_counter()
-    # print(f"{end_map - start_map =}")
-
-
-if __name__ == "__main__":
-    main()
