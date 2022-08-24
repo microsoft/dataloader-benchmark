@@ -5,7 +5,7 @@ from src.benchmarks.seqrecord.seqrecord import SeqRecord
 from src.benchmarks.seqrecord.tartanloader import test_iter
 
 
-def main(args)
+def main(args):
     record = SeqRecord.load_record_from_dict(args.rootdir)
     record.rootdir = args.rootdir
     segment_len = 16
@@ -17,9 +17,13 @@ def main(args)
     print(f"{end_iter - start_iter =}")
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--rootdir", type=str, default="/datadrive/azure_mounted_data/commondataset2/tartanair-release1/abandonedfactory/records")
+    parser.add_argument(
+        "--rootdir",
+        type=str,
+        default="/datadrive/azure_mounted_data/commondataset2/tartanair-release1/abandonedfactory/records",
+    )
     args = parser.parse_args()
 
     main(args)
