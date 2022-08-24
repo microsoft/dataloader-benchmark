@@ -68,8 +68,8 @@ def main(args):
     dt_sleep = args.watch_every_n_seconds
 
     while True:
-        ram_result = os.popen("free -th").readlines()[-1].split()[1:]
-        ram_total, ram_used, ram_free = (float(item.split("Gi")[0]) for item in ram_result)
+        ram_total, ram_used, ram_free = os.popen("free -th").readlines()[-1].split()[1:]
+        ram_used = float(ram_used[:-2])  # last two letters of string can be "Mi" or "Gi"
         metrics[f"monitor/node_{node_rank:02}/ram_usage_GB"] = ram_used
         metrics[f"monitor/node_{node_rank:02}/ram_usage_percent"] = psutil.virtual_memory().percent
         metrics[f"monitor/node_{node_rank:02}/cpu_usage_percent"] = psutil.cpu_percent()

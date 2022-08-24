@@ -2,7 +2,7 @@ description: dataloader-benchmark
 
 target:
   service: aml
-  name: v100-1x
+  name: V100-1x-ded
 
 environment:
   registry: commondockerimages.azurecr.io
@@ -23,8 +23,8 @@ storage:
     mount_dir: /mnt/data
     mount_options: ["--file-cache-timeout-in-seconds=0"]
   results:
-    storage_account_name: shuhangchen 
-    container_name: amulet
+    storage_account_name: ramadaanaml
+    container_name: dataloader-benchmark-results
     is_output: True
 
 jobs:
@@ -33,14 +33,16 @@ jobs:
     command:
       - export MKL_THREADING_LAYER="GNU"
       - python src/system_monitor.py --watch_every_n_seconds 1 &
-      - python src/benchmarks/tartanair_ffcv.py
+      - python src/benchmarks/tartanair/tartanair_ffcv.py
         --dataset tartanair
+        --modalities image_left depth_left flow_flow flow_mask seg_left 
         --benchmark_results_file /mnt/results/tartanair_ffcv.csv
         --beton_file /mnt/data/tartanair-release1/tartan_abandonedfactory_easy.beton
         --batch_size 32
         --num_workers 4
         --order quasi_random
         --os_cache False
+
     submit_args:
       container_args:
         shm_size: 640g

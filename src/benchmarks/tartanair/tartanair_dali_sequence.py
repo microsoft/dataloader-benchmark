@@ -1,12 +1,16 @@
-import distutils
+import argparse
 import os
+from distutils.util import strtobool
 
 import mlflow
 import numpy as np
 import nvidia.dali.fn as fn
-from benchmarker import Benchmarker
 from nvidia.dali import pipeline_def
 from nvidia.dali.plugin.pytorch import DALIGenericIterator
+
+from src.benchmarks.benchmarker import Benchmarker
+from src.benchmarks.common_opts import add_common_args
+from src.benchmarks.tartanair.tartanair_opts import add_tartanair_args
 
 
 @pipeline_def
@@ -103,58 +107,32 @@ def benchmark(args):
     benchmarker.benchmark_tartanair(args)
 
 
-def get_parsed_args():
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--benchmark_results_file", default="benchmark_results_tartanair.csv", type=str)
-    parser.add_argument("--verbose", default="no", type=lambda x: bool(distutils.util.strtobool(x)))
-    parser.add_argument("--batch_size", type=int, default=64)
-    parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--num_threads", type=int, default=os.cpu_count())
+def add_dali_args(group):
+    group.add_argument("--seed", type=int, default=42)
+    group.add_argument("--num_threads", type=int, default=os.cpu_count())
     # nvidia.dali.fn.readers.sequence¶ only supports cpu backend
-    parser.add_argument("--device", type=str, default="cpu")
-    parser.add_argument("--device_ops", type=str, default="cpu")
-    parser.add_argument("--device_id", type=int, default=0)
-    parser.add_argument("--img_dim", type=int, default=224)
-    parser.add_argument("--random_shuffle", default="yes", type=lambda x: bool(distutils.util.strtobool(x)))
-    parser.add_argument("--sequence_length", type=int, default=16)
-    parser.add_argument("--img_crop", type=int, default=448)
-    parser.add_argument("--initial_fill", type=int, default=100)
-    parser.add_argument("--seq_dir", type=str, default="/datadrive/localdatasets/tartanair-release1-dali")
-    parser.add_argument("--is_amlt", default="yes", type=lambda x: bool(distutils.util.strtobool(x)))
-
-    parser.add_argument("--seq_len", default=16, type=int, help="number of frames in each video block")
-    parser.add_argument("--num_seq", default=1, type=int, help="number of video blocks")
-    # not used
-    parser.add_argument("--num_workers", default=6, type=int, help="number of cpu cores")
-    parser.add_argument(
-        "--image_left",
-        default=["depth_left"],
-        help="list of modalities (strings)",
-        nargs="+",
-        type=str,
-        choices=[
-            "image_left",
-            "image_right",
-            "depth_left",
-            "depth_right",
-            "flow_mask",
-            "flow_flow",
-            "seg_left",
-            "seg_right",
-        ],
-    )
-
-    args = parser.parse_args()
-    return args
+    group.add_argument("--device", type=str, default="cpu")
+    group.add_argument("--device_ops", type=str, default="cpu")
+    group.add_argument("--device_id", type=int, default=0)
+    group.add_argument("--random_shuffle", default="yes", type=lambda x: bool(strtobool(x)))
+    group.add_argument("--sequence_length", type=int, default=16)
+    group.add_argument("--initial_fill", type=int, default=100)
+    group.add_argument("--seq_dir", type=str, default="/datadrive/localdatasets/tartanair-release1-dali")
+    group.add_argument("--is_amlt", default="yes", type=lambda x: bool(strtobool(x)))
 
 
-def main():
-    args = get_parsed_args()
+def main(args):
     benchmark(args)
     visualize_seq_pipe(args)
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+
+    add_common_args(parser.add_argument_group(title="common args"))
+    add_tartanair_args(parser.add_argument_group(title="tartanair args"))
+    add_dali_args(parser.add_argument_group(title="dali args"))
+
+    args = parser.parse_args()
+
+    main(args)

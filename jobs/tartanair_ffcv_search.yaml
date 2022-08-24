@@ -7,8 +7,9 @@ target:
 environment:
   registry: commondockerimages.azurecr.io
   username: commondockerimages
-  image: dataloader-benchmark:latest
+  image: dataloader-benchmark:latest-ffcv
   setup:
+    - pip install mlflow azureml-mlflow azureml-core
     - pip install -e .
 
 # $CONFIG_DIR is expanded to the directory of this config file.
@@ -17,8 +18,8 @@ code:
 
 storage:
   data:
-    storage_account_name: weatherdatastorage2
-    container_name: datasets
+    storage_account_name: commondatasets2
+    container_name: commondatasets
     mount_dir: /mnt/data
     mount_options: ["--file-cache-timeout-in-seconds=0"]
   results:
@@ -28,17 +29,20 @@ storage:
 
 search:
   job_template:
-    name: climate_ffcv_{auto:10s}
+    name: tartanair_ffcv_modalities_image_left_depth_left_flow_flow_seq_len_1_{auto:10s}
     sku: G1
     command:
+      - export MKL_THREADING_LAYER="GNU"
       - python src/system_monitor.py --watch_every_n_seconds 1 &
-      - python src/benchmarks/climate/climate_ffcv.py
-        --benchmark_results_file /mnt/results/climate.csv
-        --beton_file /mnt/data/trial/1.40625/{use}/val.beton
-        --batch_size {batch_size}
-        --num_workers {num_workers}
+      - python src/benchmarks/tartanair/tartanair_ffcv.py
+        --dataset tartanair
+        --modalities image_left depth_left flow_flow flow_mask seg_left 
+        --benchmark_results_file /mnt/results/tartanair.csv
+        --beton_file /mnt/data/tartanair-release1/tartan_abandonedfactory_ratnesh.beton
+        --tartanair_ann_file /mnt/data/tartanair-release1/train_ann_debug_ratnesh.json
+        --batch_size 64
+        --num_workers 6
         --order {order}
-        --use {use}
         --os_cache {os_cache}
     submit_args:
       container_args:
@@ -48,19 +52,8 @@ search:
   type: grid
   max_trials: 1000
   params:
-    - name: num_workers
-      values: choice(6)
-
-    - name: batch_size
-      values: choice(1, 2, 4, 8, 16, 32, 64)
-
     - name: order
-      spec: discrete
-      values: ["random", "quasi_random"]
-
-    - name: use
-      spec: discrete
-      values: ["pretrain", "forecast"]
+      values: choice("random", "quasi_random")
 
     - name: os_cache
       values: choice("yes", "no")

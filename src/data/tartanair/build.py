@@ -16,7 +16,8 @@ from timm.data import create_transform
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from torchvision import transforms
 
-from .tartanair_video import TartanAirVideoDataset
+from src.data.tartanair.tartanair_video import TartanAirVideoDataset
+from src.data.tartanair.utils import ResizeFlowNP
 
 try:
     from torchvision.transforms import InterpolationMode
@@ -56,7 +57,7 @@ def build_loader(args):
     if not args.use_val:
         return dataset_train, None, data_loader_train, None, None
 
-    dataset_val, _ = build_dataset(is_train=False, config=config)
+    dataset_val, _ = build_dataset(is_train=False, args=args)
     # print(f"local rank {config.LOCAL_RANK} / global rank {dist.get_rank()} successfully build val dataset")
 
     if config.DATA.VAL_DATA_LOADER == "default":
@@ -226,6 +227,8 @@ def build_tartanair_video_transform(is_train, args):
                 resize_size=args.img_dim,
                 modalities=args.modalities,
             )
+        elif args.train_transform == "TartanAirNoTransform":
+            return TartanAirNoTransform()
         else:
             raise ValueError()
 
@@ -286,26 +289,12 @@ class TartanAirNoTransform:
                 transforms.ToTensor(),
             ]
         )
-        self.flow_transform = self.image_transform
-        self.depth_transform = self.image_transform
 
     def __call__(self, item):
         transformed_item = {}
         for modality in item:
             # TODO: We need to support multiple data types in sub-transforms (e.g. CenterCrop / Resize) for code refactoring.
-            if modality == "image_left":
-                transform = self.image_transform
-            elif modality == "flow_flow":
-                transform = self.flow_transform
-            elif modality == "depth_left":
-                transform = self.depth_transform
-            elif modality == "seg_left":
-                transform = self.depth_transform
-            elif modality == "flow_mask":
-                transform = self.flow_transform
-            else:
-                raise NotImplementedError()
-
+            transform = self.image_transform
             stacked_data = torch.stack([transform(x) for x in item[modality]], dim=1)
             transformed_item[modality] = stacked_data
 

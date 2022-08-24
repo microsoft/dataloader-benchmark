@@ -29,18 +29,20 @@ storage:
 search:
   job_template:
     name: tartanair_{auto:10s}
+    # name: tartanair_cuda_sync_{auto:10s}
     sku: G1
     command:
       - python src/system_monitor.py --watch_every_n_seconds 1 &
       - python src/benchmarks/tartanair/tartanair_og.py
-        --train_ann_file /mnt/data/tartanair-release1/train_ann_debug_ratnesh.json
-        --benchmark_results_file /mnt/results/tartanair_search.csv
+        --train_ann_file /mnt/data/tartanair-release1/train_ann_abandonedfactory_easy.json
+        --benchmark_results_file /mnt/results/abandonedfactory_easy.csv
         --batch_size {batch_size}
         --num_workers {num_workers}
         --num_seq {num_seq}
         --seq_len {seq_len}
         --modalities {modalities}
         --train_transform {train_transform}
+        --verbose yes
     submit_args:
       container_args:
         shm_size: 640g
@@ -50,24 +52,20 @@ search:
   max_trials: 1000
   params:
     - name: num_workers
-      values: choice(6)
+      values: choice(4, 6)
 
     - name: batch_size
-      # values: choice(1, 2, 4, 8, 16, 32, 64)
-      values: choice(64)
+      values: choice(32)
 
     - name: num_seq
       values: choice(1)
 
     - name: seq_len
-      # values: choice(1, 2, 4, 8, 16)
-      values: choice(1)
+      values: choice(16)
 
     - name: modalities
-      # values: choice("image_left", "depth_left", "flow_flow", "image_left flow_flow", "image_left depth_left", "image_left depth_left flow_flow")
-      values: choice("image_left")
-      # values: choice("image_left", "image_right", "depth_left", "depth_right", "flow_mask", "flow_flow", "seg_left", "seg_right")
+      values: choice("image_left depth_left seg_left flow_mask flow_flow")
 
     - name: train_transform
-      # values: choice("TartanAirVideoTransformWithAugmentation", "TartanAirVideoTransform")
-      values: choice("TartanAirVideoTransform")
+      values: choice("TartanAirNoTransform")
+      # values: choice("TartanAirNoTransform", "TartanAirVideoTransform", "TartanAirVideoTransformWithAugmentation")

@@ -27,7 +27,7 @@ storage:
     is_output: True
 
 jobs:
-  - name: tartanair_og
+  - name: tartanair_seqrecord
     sku: 1xG1
     command:
       - python src/benchmarks/seqrecord/tartan_record.py
