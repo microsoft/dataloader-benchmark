@@ -18,41 +18,48 @@ for key in batch:
 torch.cuda.synchronize()
 ```
 ### locally on vm 
+
+Local VM configuration: Standard NC6s v3 (6 vcpus, 112 GiB memory).
+
 On local virtual machine, data access is taken care of by blobfuse.
 
 
 |method|mins|batch_size|num_workers| shuffle? (buffer size) | prefetch factor|
 |---|--- |---| --- | --- | ---|
 |SeqRecord(iter)|18| 32|4 | 100 | 2|
+|SeqRecord(iter)|13| 32|6 | 100 | 2|
 |SeqRecord(map)|32| 32|4 | False | 2|
 |SeqRecord(map)|10*60| 32|4 | True | 2|
 |original TartanAIR loader|  44   |32|4 | False| 1|
 |original TartanAIR loader|  50   |32| 4| True | 1|
 
-ffcv on tartanair with `sqe_len=1` (ffcv is not naturally suited for reading clips from video),
+ffcv on tartanair with `seq_len=1` (ffcv is not naturally suited for reading clips from video),
 
 |method | min | batch_size | num_workers | shuffle? | prefetch factor |
 |---| --- | --- | ---| ---| ---|
 |ffcv|15 | 32 | 4| random | unknown|
 
-ffcv on tartanair with `sqe_len=16` (Sai's seqence-ffcv version) has memory issues.
+ffcv on tartanair with `seq_len=16` (Sai's seqence-ffcv version) has memory issues.
 
-### aml with amulet
+### AML with amulet
+
+AML compute configuration: Standard_NC6s_v3 (6 cores, 112 GB RAM, 336 GB disk).
+
 data download and caching is unknonw.
 
 |method|mins | batch_size| num_workers | shuffle? (buffer size) | prefetch factor|
 |---|---| ---| ---| ---| ---|
+|SeqRecord | 18| 32 | 4 | 100| 2|
 |original tartanAIR loader| 6*60 |32| 4| True | 1|
 |original tartanAIR loader| 50 |32| 4| False | 1|
-|SeqRecord | 18| 32 | 4 | 100| 2|
 
 
-ffcv with `seg_len=1`
+ffcv with `seq_len=1`
 |method|mins | batch_size| num_workers | shuffle (size)? | prefetch factor|
 |---|---| ---| ---| ---| ---|
 |ffcv| 10 |32| 4| quasi-random | unkown|
 
-ffcv with `seg_len=16` has memory issue on aml also.
+ffcv with `seq_len=16` has memory issue on aml also.
 ### local vm with blobfile 
 Reading data from storage account of azure directly using [blobfile](https://github.com/christopher-hesse/blobfile).
 |method|mins | batch_size| num_workers | shuffle (size)? | prefetch factor|
@@ -60,14 +67,14 @@ Reading data from storage account of azure directly using [blobfile](https://git
 |SeqRecord | 45| 32 | 4 | 100| 2|
 
 
-### profile of native SeqRecord on local VM
+### profiling native SeqRecord on local VM
+The following result is obtained for SeqRecord with `num_workers=6` on local machines.
 ![profile](./profiler_record.png)
 
-Majority of the computation time is spent on numpy array and tensor operations:
-1. implement_array_function
-2. torch.stack
-3. torch.tensor.cuda()
-4. io.open()
+Majority of the computation time is spent on cuda operations:
+1. cuda of torch tensor
+2. select.poll (from datapipe?)
+3. buffer reader 
+4. posix.read and posix.write
 
-While `implement_array_function` seems to be a dispatch function, disabling it won't accelerate the program and computation time will then be mostly consumed by other
-numpy functions like `concatenate`. `io.open()` does not seem to be the bottleneck?
+Why do we have posix write? We do not have any write operations. `io.open()` does not seem to be the bottleneck in this case?
