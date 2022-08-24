@@ -2,8 +2,6 @@
 """
 
 
-import os
-from random import shuffle
 from time import perf_counter
 from typing import Dict, List, Optional
 
@@ -47,20 +45,20 @@ class MapTartanAIRDatapipe(dp.map.MapDataPipe):
     def __getitm__(self, idx: int) -> Dict[str, np.ndarray]:
         head_idx = self.segmentproto["head4segment"][idx]
         item = self.record.read_one_segment(self.segmentproto["segment_len"], head_idx)
-        return list2tensor(item)
+        return list2array(item)
 
     def __len__(self):
         return len(self.segmentproto["head4segment"])
 
 
 def collate_fn(batch: List[Dict[str, np.ndarray]]) -> Dict[str, torch.Tensor]:
-    collated_batch = {}
+    collated_batch: Dict[str, torch.Tensor] = {}
     for feature in batch[0]:
         collated_batch[feature] = torch.from_numpy(np.stack([batch[i][feature] for i in range(len(batch))], axis=0))
     return collated_batch
 
 
-def list2tensor(data_np: Dict[str, List[np.ndarray]]) -> Dict[str, np.ndarray]:
+def list2array(data_list: Dict[str, List[np.ndarray]]) -> Dict[str, np.ndarray]:
     """transform data from list of np.array to a single numpy array
 
     Args:
@@ -69,10 +67,10 @@ def list2tensor(data_np: Dict[str, List[np.ndarray]]) -> Dict[str, np.ndarray]:
     Returns:
         Dict[str, np.ndarray]: _description_
     """
-    data_torch: Dict[str, np.ndarray] = {}
-    for feature in data_np:
-        data_torch[feature] = np.stack(data_np[feature], axis=0)
-    return data_torch
+    data_array: Dict[str, np.ndarray] = {}
+    for feature in data_list:
+        data_array[feature] = np.stack(data_list[feature], axis=0)
+    return data_array
 
 
 def build_itertartanair_datapipe(record, segment_len, dl_config):
@@ -84,7 +82,7 @@ def build_itertartanair_datapipe(record, segment_len, dl_config):
     # sharding: Place ShardingFilter (datapipe.sharding_filter) as early as possible in the pipeline,
     # especially before expensive operations such as decoding, in order to avoid repeating these expensive operations across worker/distributed processes.
     datapipe = dp.iter.ShardingFilter(datapipe)
-    datapipe = dp.iter.Mapper(datapipe, fn=list2tensor)
+    datapipe = dp.iter.Mapper(datapipe, fn=list2array)
     # Note that if you choose to use Batcher while setting batch_size > 1 for DataLoader,
     # your samples will be batched more than once. You should choose one or the other.
     # https://pytorch.org/data/main/tutorial.html#working-with-dataloader

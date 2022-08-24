@@ -23,11 +23,11 @@ On local virtual machine, data access is taken care of by blobfuse.
 
 |method|mins|batch_size|num_workers| shuffle? (buffer size) | prefetch factor|
 |---|--- |---| --- | --- | ---|
-|SeqRecord(iter)|18| 8|4 | 100 | 2|
-|SeqRecord(map)|32| 8|4 | False | 2|
-|SeqRecord(map)|10*60| 8|4 | True | 2|
-|original TartanAIR loader|  44   |8|4 | False| 1|
-|original TartanAIR loader|  50   |8| 4| True | 1|
+|SeqRecord(iter)|18| 32|4 | 100 | 2|
+|SeqRecord(map)|32| 32|4 | False | 2|
+|SeqRecord(map)|10*60| 32|4 | True | 2|
+|original TartanAIR loader|  44   |32|4 | False| 1|
+|original TartanAIR loader|  50   |32| 4| True | 1|
 
 ffcv on tartanair with `sqe_len=1` (ffcv is not naturally suited for reading clips from video),
 

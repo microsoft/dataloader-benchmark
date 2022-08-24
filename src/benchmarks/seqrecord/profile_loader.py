@@ -10,7 +10,7 @@ def main(args)
     record.rootdir = args.rootdir
     segment_len = 16
 
-    dl_config = {"num_workers": 0, "batch_size": 32, "prefetch_factor": 2}
+    dl_config = {"num_workers": 6, "batch_size": 32, "prefetch_factor": 2}
     start_iter = perf_counter()
     test_iter(record, segment_len, dl_config)
     end_iter = perf_counter()
