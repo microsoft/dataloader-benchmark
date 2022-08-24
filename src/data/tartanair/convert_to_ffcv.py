@@ -59,11 +59,7 @@ def convert_tartanair(
     )
 
     rgb, depth, flow, seg, mask = dataset[0]
-    print(f"{rgb.dtype=}")
-    print(f"{depth.dtype=}")
-    print(f"{flow.dtype=}")
-    print(f"{seg.dtype=}")
-    print(f"{mask.dtype=}")
+
     writer = DatasetWriter(
         output_beton_file,
         {
