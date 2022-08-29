@@ -17,7 +17,7 @@ class ResizeFlowNP:
 
         th, tw = self.size
         h, w = sample.shape[0], sample.shape[1]
-        sample = cv2.resize(sample, (tw, th), interpolation=cv2.INTER_LINEAR)
+        sample = cv2.resize(sample, (tw, th), interpolation=cv2.INTER_LINEAR) # comment by shc: should it be (th, tw)?
         if self.scale_flow:
             sample[:, :, 0] = sample[:, :, 0] * (float(tw) / float(w))
             sample[:, :, 1] = sample[:, :, 1] * (float(th) / float(h))
