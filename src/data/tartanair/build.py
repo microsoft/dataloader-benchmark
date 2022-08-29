@@ -11,11 +11,12 @@ import numpy as np
 import torch
 import torch.utils.data
 from PIL import Image, ImageFilter, ImageOps
-from src.data.tartanair.tartanair_video import TartanAirVideoDataset
-from src.data.tartanair.utils import ResizeFlowNP
 from timm.data import create_transform
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from torchvision import transforms
+
+from src.data.tartanair.tartanair_video import TartanAirVideoDataset
+from src.data.tartanair.utils import ResizeFlowNP
 
 try:
     from torchvision.transforms import InterpolationMode

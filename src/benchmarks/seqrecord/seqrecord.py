@@ -1,13 +1,22 @@
-"""Utils for decoding and encoding each item in data file
-"""
+"""Utils for decoding and encoding each item in data file."""
 
 import collections
 import io
 import os
 import pickle
-from typing import Any, BinaryIO, Dict, Generator, List, Optional, Sequence, Tuple, TypeVar, Union
+from typing import (
+    Any,
+    BinaryIO,
+    Dict,
+    Generator,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
-import blobfile as bf
 import numpy as np
 
 SUBFOLDER_NAME = "records"  # subfolder name to stored serialized record data
@@ -19,8 +28,8 @@ SR = TypeVar("SR", bound="SeqRecord")
 
 
 class SeqRecord:
-    """A serialization protocal that stores sequences into record files, while provides index files to
-    read segments from records."""
+    """A serialization protocal that stores sequences into record files, while provides index files
+    to read segments from records."""
 
     def __init__(self, rootdir: str, features: List[str]) -> None:
         self.features: List[str] = features  # seq_start marks if the frame is the beginning of a new sequence
@@ -45,7 +54,8 @@ class SeqRecord:
         return [self.recordfile_idx_to_path(i) for i in range(self.recordfile_idx)]
 
     def write_item(self, item: Dict[str, np.ndarray], is_seq_start: bool) -> None:
-        """write one item data dict(feature->np.ndarray) into bytes and write encoded bytes into current record files.
+        """write one item data dict(feature->np.ndarray) into bytes and write encoded bytes into
+        current record files.
 
         Args:
             item (Dict[str, np.ndarray]): feature to data (np.ndarray)
@@ -80,8 +90,9 @@ class SeqRecord:
         return
 
     def seq_start(self) -> None:
-        """Notify the record that a new sequence is being written, let the record
-        decide if we need a new record file to write into.
+        """Notify the record that a new sequence is being written, let the record decide if we need
+        a new record file to write into.
+
         Two cases we need to open new file:
             1. we currently do not have record file to write into
             2. current file size is big enough (larger than MAX_RECORDFILE_SIZE)
@@ -132,7 +143,8 @@ class SeqRecord:
         self, recordfile_desc: Union[io.BufferedReader, BinaryIO], itemproto: Dict[str, Union[int, dict]]
     ) -> Dict[str, np.ndarray]:
         """Given record file descriptor and serialization proto of a single data item, return the
-        decoded dictionary(feature->data(np.ndarray)) of the item, where decoding is done by np.frombuffer()
+        decoded dictionary(feature->data(np.ndarray)) of the item, where decoding is done by
+        np.frombuffer()
 
         Args:
             recordfile_desc (io.BufferedReader): python file object of the record file (required by numpy)
@@ -153,8 +165,8 @@ class SeqRecord:
         return item
 
     def read_record(self) -> Generator[Dict[str, np.ndarray], None, None]:
-        """Given that the dataset has been recored, decode the record sequentially, each time returning a dict that contains the data
-        item.
+        """Given that the dataset has been recored, decode the record sequentially, each time
+        returning a dict that contains the data item.
 
         Yields:
             Generator[Dict[str, np.ndarray], None, None]: data item [feature->data]. All data items are being returned sequentially
@@ -293,14 +305,17 @@ class SeqRecord:
         return segment
 
     def close_recordfile(self):
-        """Close opened file descriptor! This needs to be called when finishes scanning over the dataset."""
+        """Close opened file descriptor!
+
+        This needs to be called when finishes scanning over the dataset.
+        """
         self.recordfile_endpoints[-1].append(self.idx - 1)
         self.recordfile_idx += 1
         self.recordfile_desc.close()
         self.recordfile_desc = None
 
     def dump(self) -> None:
-        """save attributes of instance of record into a file
+        """save attributes of instance of record into a file.
 
         Note:
         saving attribute dict instead of pickled class: pickling class and loading it is a mess because of
@@ -311,8 +326,8 @@ class SeqRecord:
 
     @classmethod
     def load_record_from_dict(cls, rootdir: str) -> SR:
-        """return an instance of sequence record from file that stores attributes of record
-        as a dict (stored at path).
+        """return an instance of sequence record from file that stores attributes of record as a
+        dict (stored at path).
 
         Args:
             path (str): path to the file that stores dict of attributes of seqrecord

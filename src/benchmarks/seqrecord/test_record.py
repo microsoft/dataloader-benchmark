@@ -3,8 +3,6 @@ from typing import Dict, List
 
 import numpy as np
 import numpy.testing as nptest
-from matplotlib.pyplot import axis
-
 from seqrecord import SeqRecord
 
 # todo: test read segment carefully
@@ -20,7 +18,10 @@ def concate_list(file2segment_item: Dict[str, list]):
 
 class Test_SeqRecord(unittest.TestCase):
     def test_encode_decode(self):
-        """Testing encode and decode of record. No segment involved."""
+        """Testing encode and decode of record.
+
+        No segment involved.
+        """
         record, dataset, features = build_simple_dataset()
         # encode dataset
         for i, item in enumerate(dataset):
@@ -38,7 +39,8 @@ class Test_SeqRecord(unittest.TestCase):
         loaded_record = SeqRecord.load_record_from_dict("/home/azureuser/data/data4record/records")
 
     def test_idx4segment(self):
-        """Having the record written (and various attributes setup), generate an index mapping for specific segment len."""
+        """Having the record written (and various attributes setup), generate an index mapping for
+        specific segment len."""
         record, dataset, features = build_simple_dataset()
         seq_len = 4
         # encode dataset
@@ -219,7 +221,7 @@ class Test_SeqRecord(unittest.TestCase):
         self.assertEqual(len(ids), 0)
 
     def test_segmentreader(self):
-        """test segment sharding and stream reading"""
+        """test segment sharding and stream reading."""
         record, dataset, features = build_seq_dataset()
         seq_len = 4
         # encode dataset
@@ -260,7 +262,7 @@ class Test_SeqRecord(unittest.TestCase):
 
 
 def build_simple_dataset():
-    """Generate a fake dataset to test methods of Record
+    """Generate a fake dataset to test methods of Record.
 
     Returns:
         _type_: _description_
@@ -279,7 +281,7 @@ def build_simple_dataset():
 
 
 def build_broken_dataset(feature_is_none_list: List[int]):
-    """Generate a fake dataset to test methods of Record where some features does not exist
+    """Generate a fake dataset to test methods of Record where some features does not exist.
 
     Returns:
         _type_: _description_
@@ -301,7 +303,8 @@ def build_broken_dataset(feature_is_none_list: List[int]):
 
 
 def build_seq_dataset():
-    """Generate a fake dataset to test methods of Record, where data items from the same feature shares numpy array shapes.
+    """Generate a fake dataset to test methods of Record, where data items from the same feature
+    shares numpy array shapes.
 
     Returns:
         _type_: _description_

@@ -3,7 +3,6 @@ import os
 from timeit import default_timer as timer
 
 import mlflow
-import torch
 from tqdm import tqdm
 
 

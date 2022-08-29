@@ -23,12 +23,12 @@ storage:
     mount_options: ["--file-cache-timeout-in-seconds=0"]
   results:
     storage_account_name: shuhangchen
-    container_name: amulet 
+    container_name: amulet
     is_output: True
 
 jobs:
   - name: tartanair_og
-    sku: 1xG1    
+    sku: 1xG1
     submit_args:
       container_args:
         shm_size: 640g
@@ -40,9 +40,6 @@ jobs:
         --batch_size 32
         --num_workers 4
         --num_seq 1
-        --modalities image_left depth_left flow_flow flow_mask seg_left 
+        --modalities image_left depth_left flow_flow flow_mask seg_left
         --seq_len 16
         --train_transform TartanAirNoTransform
-
-
-
