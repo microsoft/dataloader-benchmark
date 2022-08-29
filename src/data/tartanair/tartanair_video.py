@@ -6,7 +6,6 @@ from collections import defaultdict
 import numpy as np
 import torch.utils.data as data
 from PIL import Image
-
 from src.data.tartanair.zipreader import ZipReader, is_zip_path
 
 
@@ -199,8 +198,9 @@ class TartanAirVideoDataset(data.Dataset):
 
             #### added for COMPASS as  N, C, SL, H, W ########
             for modality, _ in item.items():
-                seq = item[modality]
-                _, C, H, W = seq.permute(1, 0, 2, 3).shape
+                seq = item[modality] # size[C, N, H, W]
+                seq = seq.permute(1, 0, 2, 3) # [N, C, H, W]
+                _, C, H, W = seq.size()
                 # (C, H, W) = seq[0].size()
                 # seq = torch.stack(seq, 0)
                 seq = seq.view(self.num_seq, self.seq_len, C, H, W).transpose(1, 2)

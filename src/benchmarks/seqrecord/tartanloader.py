@@ -8,14 +8,10 @@ from typing import Dict, List, Optional
 import numpy as np
 import torch
 import torchdata.datapipes as dp
+from src.benchmarks.seqrecord.dataload_utils import InputConfig
 from src.benchmarks.seqrecord.seqrecord import SeqRecord
 from tqdm import tqdm
 
-# todo: pre fetch and shuffle
-# todo: transform (offline, online, to discuss with shuang)
-# todo: add profile
-# todo: ask, how distributed works?
-# todo: test with old dataloader and some stats of record (number of record comparison etc...)
 # todo: how to shard in the record file level? future work and why it is needed?
 # just break read_all_segments and return record with subset of record files, along with file2item index
 
@@ -73,7 +69,7 @@ def list2array(data_list: Dict[str, List[np.ndarray]]) -> Dict[str, np.ndarray]:
     return data_array
 
 
-def build_itertartanair_datapipe(record, segment_len, dl_config):
+def build_itertartanair_datapipe(record, segment_len, dl_config, input_config):
 
     datapipe = IterTartanAIRDatapipe(record, segment_len, None)
     # Shuffle will happen as long as you do NOT set `shuffle=False` later in the DataLoader
@@ -83,6 +79,7 @@ def build_itertartanair_datapipe(record, segment_len, dl_config):
     # especially before expensive operations such as decoding, in order to avoid repeating these expensive operations across worker/distributed processes.
     datapipe = dp.iter.ShardingFilter(datapipe)
     datapipe = dp.iter.Mapper(datapipe, fn=list2array)
+    datapipe = dp.iter.Mapper(datapipe, fn=input_config.train_transform)
     # Note that if you choose to use Batcher while setting batch_size > 1 for DataLoader,
     # your samples will be batched more than once. You should choose one or the other.
     # https://pytorch.org/data/main/tutorial.html#working-with-dataloader
@@ -99,8 +96,8 @@ def build_maptartanair_datapipe(record, segment_len, dl_config):
     return datapipe
 
 
-def test_iter(record, segment_len, dl_config):
-    datapipe = build_itertartanair_datapipe(record, segment_len, dl_config)
+def test_iter(record, segment_len, dl_config, input_config):
+    datapipe = build_itertartanair_datapipe(record, segment_len, dl_config, input_config)
     dataloader = torch.utils.data.DataLoader(
         datapipe, shuffle=True, num_workers=dl_config["num_workers"], prefetch_factor=dl_config["prefetch_factor"]
     )
@@ -133,8 +130,20 @@ if __name__ == "__main__":
     record.rootdir = rootdir
     segment_len = 16
 
-    dl_config = {"num_workers": 0, "batch_size": 32, "prefetch_factor": 2}
+    # configs from input modalities
+    config_path = "/home/azureuser/AutonomousSystemsResearch/dataloader-benchmark/src/benchmarks/seqrecord/config.yaml"
+    with open(config_path, mode="r") as f:
+        import yaml
+
+        config = yaml.safe_load(f)["inputs"]
+
+    input_config = InputConfig()
+    for key, modal in config.items():
+        modal["kwargs"]["name"] = key
+        input_config.add_input(modal)
+
+    dl_config = {"num_workers": 6, "batch_size": 32, "prefetch_factor": 2}
     start_iter = perf_counter()
-    test_iter(record, segment_len, dl_config)
+    test_iter(record, segment_len, dl_config, input_config)
     end_iter = perf_counter()
     print(f"{end_iter - start_iter =}")

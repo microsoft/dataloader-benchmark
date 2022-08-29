@@ -28,10 +28,11 @@ def read_tartanair_features(rootdir: str, video_frame: Dict[str, str], features:
     """
     item = {}
     for feature in features:
-        if feature not in video_frame:
+        feature_path = f"{feature}_rel_path"
+        if feature_path not in video_frame:
             item[feature] = np.array(None)
             continue
-        rel_path = video_frame[feature].strip()
+        rel_path = video_frame[feature_path].strip()
         # this is only a temporary fix that only works for linux
         rel_path = "/".join(rel_path.split("/")[1:])
         path = os.path.join(rootdir, rel_path)
@@ -70,11 +71,11 @@ def encode_tartanAIR(rootdir: str, json_filepath: str) -> None:
     """
     # this should include all potential attributes we intent to read
     features = [
-        "image_left_rel_path",
-        "depth_left_rel_path",
-        "seg_left_rel_path",
-        "flow_flow_rel_path",
-        "flow_mask_rel_path",
+        "image_left",
+        "depth_left",
+        # "seg_left",
+        "flow_flow",
+        # "flow_mask",
     ]
     record = SeqRecord(rootdir=rootdir, features=features)
     with open(json_filepath, "r") as f:
@@ -124,9 +125,10 @@ def zipped_numpy_loader(path):
 
 
 if __name__ == "__main__":
-    config_path = "./tartanair.yaml"
-    import yaml
+    config_path = "/home/azureuser/AutonomousSystemsResearch/dataloader-benchmark/src/benchmarks/seqrecord/config.yaml"
 
     with open(config_path, mode="r") as f:
+        import yaml
+
         config = yaml.safe_load(f.read())
     encode_tartanAIR(config["rootdir"], config["json_filepath"])
