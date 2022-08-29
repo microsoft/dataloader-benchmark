@@ -67,6 +67,22 @@
                 "--verbose",
                 "yes"
             ]
+        },
+        {
+            "name": "tartan_dali",
+            "type": "python",
+            "request": "launch",
+            "program": "src/benchmarks/tartanair/tartanair_dali.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--benchmark_results_file", 
+                "tartanair.csv",
+                "--batch_size", "64",
+                "--image_dir", "/datadrive/localdatasets/tartanair-release1/abandonedfactory/Easy/P000/",
+                "--is_amlt", "no"
+            ]
         }
+
     ]
 }

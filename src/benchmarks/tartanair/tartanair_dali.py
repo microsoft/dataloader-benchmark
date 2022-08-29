@@ -55,7 +55,7 @@ def visualize_rgb_images(image_batch, batch_size, is_amlt=False, result_num_cols
     if is_amlt:
         mlflow.log_figure(fig, os.path.join(result_dir, "image.png"))
     else:
-        plt.savefig(os.path.join(result_dir, "image.png"))
+        fig.savefig(os.path.join(result_dir, "image.png"))
 
     print("visualize_rgb_images() done")
 
@@ -77,7 +77,7 @@ def visualize_rgb_image_pipeline(args):
     pipe.build()
     pipe_out = pipe.run()
     # print(pipe_out)
-    images, labels = pipe_out
+    (images,) = pipe_out
     # print("Images is_dense_tensor: " + str(images.is_dense_tensor()))
     # print("Images is_dense_tensor: " + str(images.is_dense_tensor()))
     # print(labels)

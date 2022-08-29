@@ -6,7 +6,7 @@ import mlflow
 
 
 class Benchmarker:
-    def __init__(self, verbose=False, dataset="tartanair", library="pytorch", init_time=0.0):
+    def __init__(self, verbose=False, dataset="tartanair", library="pytorch", init_time=timer()):
         self.verbose = verbose
         self.dataset = dataset
         self.library = library
