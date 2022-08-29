@@ -183,12 +183,9 @@ class Depth(Modality):
     img_dim: int
 
     def __post_init__(self):
-        # train_trans = torch.nn.Sequential(
-        #     transforms.CenterCrop(size=self.img_crop),
-        #     transforms.Resize([self.img_dim, self.img_dim], interpolation=InterpolationMode.BILINEAR),
-        # )
         train_trans = torch.nn.Sequential(
             transforms.CenterCrop(size=self.img_crop),
+            transforms.Resize([self.img_dim, self.img_dim], interpolation=InterpolationMode.BILINEAR),
         )
         self.train_trans = train_trans
 
@@ -207,11 +204,6 @@ class Depth(Modality):
         """
         tt = torch.from_numpy(x).float()
         tt = self.train_trans(tt)
-        t, h, w = tt.size(0), tt.size(1), tt.size(2)
-        ndarry = np.empty((t, self.img_dim, self.img_dim), dtype=np.float32) 
-        for i in range(t):
-            ndarry[i] = cv2.resize(tt[i].numpy(), (self.img_dim, self.img_dim), interpolation=cv2.INTER_LINEAR)
-        tt = torch.from_numpy(ndarry)
         tt = 1.0 / tt
         return tt
 
@@ -230,14 +222,10 @@ def flow_trans(x: torch.Tensor, img_dim: int) -> torch.Tensor:
         torch.Tensor: _description_
     """
     t, c, h, w = x.size(0), x.size(1), x.size(2), x.size(3)
-    # InterpolationMode.BILINEAR produces different results to cv2.resize(interpolation.linear).
+    # InterpolationMode.BILINEAR produces slightly different results to cv2.resize(interpolation.linear).
     # see https://stackoverflow.com/questions/63519965/torch-transform-resize-vs-cv2-resize
-    # x = transforms.Resize([img_dim, img_dim], interpolation=InterpolationMode.BILINEAR)(x)
+    x = transforms.Resize([img_dim, img_dim], interpolation=InterpolationMode.BILINEAR)(x)
     
-    ndarry = np.empty((t, img_dim, img_dim, c)) 
-    for i in range(t):
-        ndarry[i] = cv2.resize(x[i].permute(1, 2, 0).numpy(), (img_dim, img_dim), interpolation=cv2.INTER_LINEAR)
-    x = torch.from_numpy(ndarry).permute(0, 3, 1, 2)
     x[:, 0, :, :] = x[:, 0, :, :] * (float(img_dim) / float(w))
     x[:, 1, :, :] = x[:, 1, :, :] * (float(img_dim) / float(h))
     return x
