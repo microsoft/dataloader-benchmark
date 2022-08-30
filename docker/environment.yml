@@ -152,7 +152,6 @@ dependencies:
       - docstring-parser==0.14.1
       - fastargs==1.2.0
       - fastrlock==0.8
-      - ffcv==0.0.3
       - filelock==3.7.1
       - flake8==4.0.1
       - fonttools==4.33.3

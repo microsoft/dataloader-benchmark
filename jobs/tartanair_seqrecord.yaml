@@ -27,19 +27,11 @@ storage:
     is_output: True
 
 jobs:
-  - name: tartanair_og
+  - name: tartanair_seqrecord
     sku: 1xG1
+    command:
+      - python src/benchmarks/seqrecord/tartan_record.py
     submit_args:
       container_args:
         shm_size: 640g
-    command:
-      - python src/system_monitor.py --watch_every_n_seconds 1 &
-      - python src/benchmarks/tartanair/tartanair_og.py
-        --train_ann_file /mnt/data/tartanair-release1/train_ann_debug_ratnesh.json
-        --benchmark_results_file /mnt/results/tartanair.csv
-        --batch_size 32
-        --num_workers 4
-        --num_seq 1
-        --modalities image_left depth_left flow_flow flow_mask seg_left
-        --seq_len 16
-        --train_transform TartanAirNoTransform
+      env: { AZUREML_COMPUTE_USE_COMMON_RUNTIME: True }

@@ -1,4 +1,5 @@
 import argparse
+from time import perf_counter
 from timeit import default_timer as timer
 
 from src.benchmarks.benchmarker import Benchmarker
@@ -13,11 +14,14 @@ def get_dataloader(args):
 
 
 def benchmark(args):
+    start = perf_counter()
     init_time = timer()
     dataloader = get_dataloader(args)
     benchmarker = Benchmarker(verbose=args.verbose, library="pytorch", dataset="tartanair", init_time=init_time)
     benchmarker.set_dataloader(dataloader)
     benchmarker.benchmark_tartanair(args)
+    end = perf_counter()
+    print(f"{(start-end)/60.0=}")
 
 
 def main(args):

@@ -3,6 +3,7 @@ import os
 from timeit import default_timer as timer
 
 import mlflow
+from tqdm import tqdm
 
 
 class Benchmarker:
@@ -134,7 +135,7 @@ class Benchmarker:
         last = start
         num_batches = 0
 
-        for batch_idx, batch in enumerate(self.dataloader):
+        for batch_idx, batch in enumerate(tqdm(self.dataloader)):
             start_copy = timer()
             if self.library == "pytorch":
                 for key, value in batch.items():
@@ -147,7 +148,6 @@ class Benchmarker:
             if self.library == "dali":
                 batch[0]["data"].cuda()  # already on cuda, image_left only
 
-            # torch.cuda.synchronize()
             time_copy = time_copy + (timer() - start_copy)
 
             if batch_idx == 0:

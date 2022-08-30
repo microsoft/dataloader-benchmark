@@ -1,7 +1,7 @@
 from argparse import ArgumentParser
 
 import numpy as np
-from ffcv.fields import NDArrayField, RGBImageField
+from ffcv.fields import NDArrayField
 from ffcv.writer import DatasetWriter
 
 from src.data.mushr.dataset_basic import MushrVideoDatasetPreload
@@ -52,21 +52,23 @@ def convert_tartanair(
         ann_file=ann_file,
         clip_len=1,
         seq_len=1,
-        modalities=["image_left", "depth_left", "flow_flow"],
+        modalities=["image_left", "depth_left", "flow_flow", "seg_left", "flow_mask"],
         transform=None,
         video_name_keyword=None,
         is_write_to_ffcv_beton=True,
         return_mask_position=False,
     )
 
-    rgb, depth, flow = dataset[0]
+    rgb, depth, flow, seg, mask = dataset[0]
 
     writer = DatasetWriter(
         output_beton_file,
         {
-            "rgb": RGBImageField(write_mode="raw"),
+            "rgb": NDArrayField(shape=(480, 640, 3), dtype=np.dtype("uint8")),
             "depth": NDArrayField(shape=(480, 640), dtype=np.dtype("float32")),
             "flow": NDArrayField(shape=(480, 640, 2), dtype=np.dtype("float32")),
+            "seg": NDArrayField(shape=(480, 640), dtype=np.dtype("uint8")),
+            "mask": NDArrayField(shape=(480, 640), dtype=np.dtype("uint8")),
         },
         num_workers=1,
     )

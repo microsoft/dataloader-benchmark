@@ -4,11 +4,11 @@ from ffcv.fields.decoders import NDArrayDecoder
 from ffcv.loader import Loader
 from ffcv.pipeline.compiler import Compiler
 from ffcv.transforms import ToTensor
-from utils_ffcv import get_order_option
 
 from src.benchmarks.benchmarker import Benchmarker
 from src.benchmarks.common_opts import add_common_args, add_ffcv_args
 from src.benchmarks.mushr.mushr_opts import add_mushr_args
+from src.benchmarks.utils_ffcv import get_order_option
 
 Compiler.set_enabled(True)
 

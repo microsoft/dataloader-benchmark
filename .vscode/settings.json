@@ -25,5 +25,5 @@
     "isort.args": [
         "--profile",
         "black"
-    ],
+    ]
 }

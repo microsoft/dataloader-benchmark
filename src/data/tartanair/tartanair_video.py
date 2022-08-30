@@ -180,7 +180,7 @@ class TartanAirVideoDataset(data.Dataset):
 
         if self.is_write_to_ffcv_beton:
             for modality in item:
-                item[modality] = np.asarray(item[modality])
+                item[modality] = np.asarray(item[modality][0])
 
             # todo is_write_to_ffcv_beton + mask  is currently not tested
             if self.return_mask_position:
@@ -199,8 +199,9 @@ class TartanAirVideoDataset(data.Dataset):
 
             #### added for COMPASS as  N, C, SL, H, W ########
             for modality, _ in item.items():
-                seq = item[modality]
-                _, C, H, W = seq.permute(1, 0, 2, 3).shape
+                seq = item[modality]  # size[C, N, H, W]
+                seq = seq.permute(1, 0, 2, 3)  # [N, C, H, W]
+                _, C, H, W = seq.size()
                 # (C, H, W) = seq[0].size()
                 # seq = torch.stack(seq, 0)
                 seq = seq.view(self.num_seq, self.seq_len, C, H, W).transpose(1, 2)

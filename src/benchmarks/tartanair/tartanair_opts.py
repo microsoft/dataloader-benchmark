@@ -1,7 +1,7 @@
 def add_tartanair_args(group):
     group.add_argument(
         "--modalities",
-        default=["image_left", "depth_left", "flow_flow"],
+        default=["image_left", "depth_left", "seg_left", "flow_flow", "flow_mask"],
         help="list of modalities (strings)",
         nargs="+",
         type=str,
