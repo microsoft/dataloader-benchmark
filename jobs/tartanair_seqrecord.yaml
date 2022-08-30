@@ -23,7 +23,7 @@ storage:
     mount_options: ["--file-cache-timeout-in-seconds=0"]
   results:
     storage_account_name: shuhangchen
-    container_name: amulet 
+    container_name: amulet
     is_output: True
 
 jobs:
@@ -35,5 +35,3 @@ jobs:
       container_args:
         shm_size: 640g
       env: { AZUREML_COMPUTE_USE_COMMON_RUNTIME: True }
-
-

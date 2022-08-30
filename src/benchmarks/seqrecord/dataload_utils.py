@@ -1,4 +1,6 @@
-"""Implement utility functions and classes for dataloader. Mainly transforms for multiple modalities.
+"""Implement utility functions and classes for dataloader.
+
+Mainly transforms for multiple modalities.
 """
 
 import sys
@@ -14,7 +16,9 @@ from torchvision.transforms.functional import InterpolationMode
 
 
 def instantiate_modal_class(args: Dict[str, Any]) -> Any:
-    """Instantiates a class [defined in this module] with the given args that contains class name and init args.
+    """Instantiates a class [defined in this module] with the given args that contains class name
+    and init args.
+
     Args:
         init: Dict of the form {"modal":...,"$attributes":...}.
     Returns:
@@ -60,8 +64,7 @@ class Modality(ABC):
         ABC (_type_): _description_
     """
     def pre_transform(self, x: np.ndarray) -> np.ndarray:
-        """implement transform applied to raw data when data is being stored as
-        numpy arrary.
+        """implement transform applied to raw data when data is being stored as numpy arrary.
 
         Args:
             x (np.ndarray): _description_
@@ -72,8 +75,8 @@ class Modality(ABC):
         pass
 
     def train_transform(self, x: np.ndarray) -> torch.Tensor:
-        """Implement transform applied to data being used as training data when
-        dataloader reads it from datapipe.
+        """Implement transform applied to data being used as training data when dataloader reads it
+        from datapipe.
 
         Original input argument is np.ndarray, we have a warpper args_nparray2tensor that transforms the input to torch for train/val transforms so as to use torch jit.
 
@@ -88,8 +91,6 @@ class Modality(ABC):
     def val_transform(self, x: np.ndarray) -> torch.Tensor:
         """Implement transform applied to data being used as validation data when
         dataloader reads it from datapipe.
-
-        Original input argument is np.ndarray, we have a warpper args_nparray2tensor that transforms the input to torch for train/val transforms so as to use torch jit.
 
         Args:
             x (np.ndarray): _description_
@@ -153,7 +154,7 @@ class RGBImage(Modality):
 
 
 class OpticalFlow(Modality):
-    """resize permute
+    """resize permute.
 
     Args:
         Modality (): optical flow
@@ -171,7 +172,7 @@ class OpticalFlow(Modality):
         return x
 
     def train_transform(self, x: np.ndarray) -> torch.Tensor:
-        """Apply transform to batch of optical flow image
+        """Apply transform to batch of optical flow image.
 
         Args:
             x (np.ndarray): batch of optical flow image
@@ -198,7 +199,7 @@ class OpticalFlow(Modality):
 
 
 class Depth(Modality):
-    """more complicated stuff
+    """more complicated stuff.
 
     Args:
         Modality (): Depth modality
@@ -216,8 +217,8 @@ class Depth(Modality):
         return x
 
     def train_transform(self, x: np.ndarray) -> torch.Tensor:
-        """Apply transform the batch of depth image tensor of dim [t, h, w, c].
-        Each depth image is two dimensional float array
+        """Apply transform the batch of depth image tensor of dim [t, h, w, c]. Each depth image is
+        two dimensional float array.
 
         Args:
             x (np.ndarry): _description_
@@ -235,4 +236,3 @@ class Depth(Modality):
 
     def val_transform(self, x: np.ndarray) -> torch.Tensor:
         return torch.from_numpy(x)
-

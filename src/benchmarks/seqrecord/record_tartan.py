@@ -1,19 +1,19 @@
 import io
 import json
 import os
-from typing import Any, Dict, Generator, List, Optional, Sequence, Tuple, TypeVar, Union
+from typing import Dict, List
 
 import numpy as np
 from PIL import Image
-from tqdm import tqdm
-
 from seqrecord import SeqRecord
+from tqdm import tqdm
 from zipreader import ZipReader, is_zip_path
 
 
 def read_tartanair_features(rootdir: str, video_frame: Dict[str, str], features: List[str]) -> Dict[str, np.ndarray]:
-    """Construct a dictionary that, for tartanAIR dataset, maps feature name to the data from corresponding modality.
-    For feature names that the dict does not have values for, we store empty array.
+    """Construct a dictionary that, for tartanAIR dataset, maps feature name to the data from
+    corresponding modality. For feature names that the dict does not have values for, we store
+    empty array.
 
     Args:
         rootdir (str): directory that contains data
@@ -78,7 +78,7 @@ def encode_tartanAIR(rootdir: str, json_filepath: str) -> None:
         # "flow_mask",
     ]
     record = SeqRecord(rootdir=rootdir, features=features)
-    with open(json_filepath, "r") as f:
+    with open(json_filepath) as f:
         tartan_config = json.load(f)
     assert tartan_config["type"] == "video_pretrain"
 
@@ -97,6 +97,7 @@ def encode_tartanAIR(rootdir: str, json_filepath: str) -> None:
 # helper functions from original tartan dataloader: https://github.com/yunyikristy/UPAM/blob/master/compass_mem/data/tartanair_video.py#L43
 def zipped_pil_loader(path):
     """PIL image loader that supports zipped images.
+
     Ref: https://github.com/SwinTransformer/Transformer-SSL/blob/main/data/cached_image_folder.py#L179
     """
     # open path as file to avoid ResourceWarning (https://github.com/python-pillow/Pillow/issues/835)
@@ -127,7 +128,7 @@ def zipped_numpy_loader(path):
 if __name__ == "__main__":
     config_path = "/home/azureuser/AutonomousSystemsResearch/dataloader-benchmark/src/benchmarks/seqrecord/config.yaml"
 
-    with open(config_path, mode="r") as f:
+    with open(config_path) as f:
         import yaml
 
         config = yaml.safe_load(f.read())

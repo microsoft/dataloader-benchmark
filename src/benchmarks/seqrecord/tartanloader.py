@@ -1,5 +1,4 @@
-"""A TartanAIR dataset (both iterative and map style provide)
-"""
+"""A TartanAIR dataset (both iterative and map style provide)"""
 
 
 from time import perf_counter
@@ -8,9 +7,10 @@ from typing import Dict, List, Optional
 import numpy as np
 import torch
 import torchdata.datapipes as dp
+from tqdm import tqdm
+
 from src.benchmarks.seqrecord.dataload_utils import InputConfig
 from src.benchmarks.seqrecord.seqrecord import SeqRecord
-from tqdm import tqdm
 
 # todo: how to shard in the record file level? future work and why it is needed?
 # just break read_all_segments and return record with subset of record files, along with file2item index
@@ -25,8 +25,7 @@ class IterTartanAIRDatapipe(dp.iter.IterDataPipe):
         self.record = record
 
     def __iter__(self):
-        for segment in self.record.read_all_segments(self.segmentproto):
-            yield segment
+        yield from self.record.read_all_segments(self.segmentproto)
 
     def __len__(self):
         return len(self.segmentproto["head4segment"])
@@ -55,7 +54,7 @@ def collate_fn(batch: List[Dict[str, np.ndarray]]) -> Dict[str, torch.Tensor]:
 
 
 def list2array(data_list: Dict[str, List[np.ndarray]]) -> Dict[str, np.ndarray]:
-    """transform data from list of np.array to a single numpy array
+    """transform data from list of np.array to a single numpy array.
 
     Args:
         data_np (Dict[str, List[np.ndarray]]): _description_
@@ -132,7 +131,7 @@ if __name__ == "__main__":
 
     # configs from input modalities
     config_path = "/home/azureuser/AutonomousSystemsResearch/dataloader-benchmark/src/benchmarks/seqrecord/config.yaml"
-    with open(config_path, mode="r") as f:
+    with open(config_path) as f:
         import yaml
 
         config = yaml.safe_load(f)["inputs"]

@@ -1,8 +1,9 @@
 from argparse import ArgumentParser
 
 import numpy as np
-from ffcv.fields import NDArrayField, RGBImageField
+from ffcv.fields import NDArrayField
 from ffcv.writer import DatasetWriter
+
 from src.data.mushr.dataset_basic import MushrVideoDatasetPreload
 from src.data.tartanair.build import TartanAirVideoDataset
 
