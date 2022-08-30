@@ -340,7 +340,7 @@ class DepthTransform:
         H, W = x.shape
         ox, oy = int(H / 2) - 1, int(W / 2) - 1
         delta = int(self.center_crop_size / 2)
-        #x = x[ox - delta : ox + delta, oy - delta : oy + delta]
+        x = x[ox - delta : ox + delta, oy - delta : oy + delta]
         x = self.resize(x)
         x = torch.tensor(x, dtype=torch.float32).unsqueeze(0)  # [H,W] -> [1,H,W].
         # _, H, W = x.shape
