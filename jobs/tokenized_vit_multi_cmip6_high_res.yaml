@@ -1,0 +1,141 @@
+# Documentation:
+# https://amulet-docs.azurewebsites.net/main/advanced/51_distributed.html#
+# https://amulet-docs.azurewebsites.net/config_file.html
+
+description: Training Tokenized ViT on 1.40625deg data
+
+environment:
+  registry: commondockerimages.azurecr.io
+  username: commondockerimages
+  image: climate_pretraining:latest
+
+code:
+  local_dir: $CONFIG_DIR/../
+
+target:
+  service: aml
+  name: v100x8-scus
+
+storage:
+  data1:
+    storage_account_name: weatherdatastorage2
+    container_name: datasets
+    mount_dir: /mnt1/data
+    mount_options: ["--file-cache-timeout-in-seconds=0"]
+  data2:
+    storage_account_name: weathercmip6storage0
+    container_name: datasets
+    mount_dir: /mnt2/data
+    mount_options: ["--file-cache-timeout-in-seconds=0"]
+  data3:
+    storage_account_name: weathercmip6storage1
+    container_name: datasets
+    mount_dir: /mnt3/data
+    mount_options: ["--file-cache-timeout-in-seconds=0"]
+  data4:
+    storage_account_name: weathercmip6storage2
+    container_name: datasets
+    mount_dir: /mnt4/data
+    mount_options: ["--file-cache-timeout-in-seconds=0"]
+  data5:
+    storage_account_name: weathercmip6storage3
+    container_name: datasets
+    mount_dir: /mnt5/data
+    mount_options: ["--file-cache-timeout-in-seconds=0"]
+
+# some environment variables to ease up setting of jobs
+env_defaults:
+  NODES: 10
+  GPUS: 8
+
+jobs:
+  - name: tokenized_vit_1.40625deg_predict_all_continuous_mpi_tai_awi_hammoz_cmcc_1024dim_16head_8depth_4patch_5e-4_lr_scheduler_step_20000_500000_beta2_0.95 # ex: simple_job_lr_05
+    sku: ${NODES}x32G${GPUS} # ex: G1
+    process_count_per_node: ${GPUS}
+    submit_args:
+      env: { AZUREML_COMPUTE_USE_COMMON_RUNTIME: True }
+      container_args:
+        shm_size: 650g
+    command:
+      - pip install -e .
+      - export MKL_THREADING_LAYER=GNU
+      - export NODES=${NODES}
+      - python src/train_vit_multi_dataset_continuous.py --config configs/train_tokenized_vit_multi_cmip6_continuous_high_res.yaml
+        --trainer.devices=${GPUS} --trainer.num_nodes=${NODES} --trainer.strategy=ddp
+        --trainer.max_epochs=100
+        --data.num_workers=1 --data.batch_size=4
+        --model.net.decoder_depth=2 --model.net.learn_pos_emb=True --model.net.img_size=[128,256]
+        --model.net.time_history=1
+        --model.net.channel_agg='attention'
+        --model.net.init_mode='small'
+        --model.net.patch_size=4
+        --model.net.depth=8
+        --model.net.embed_dim=1024
+        --model.net.num_heads=16
+        --model.net.drop_path=0.1
+        --model.net.drop_rate=0.1
+        --model.lr=5e-4
+        --model.beta_2=0.95
+        --model.weight_decay=1e-5
+        --model.warmup_epochs=20000 --model.max_epochs=500000
+
+# search:
+#   job_template:
+#     name: tokenized_vit_5.625deg_mpi-esm_and_taiesm_{auto:10s} # ex: simple_job_lr_05
+#     sku: ${NODES}x32G${GPUS} # ex: G1
+#     submit_args:
+#       env: { AZUREML_COMPUTE_USE_COMMON_RUNTIME: True }
+#       container_args:
+#         shm_size: 650g
+#     command:
+#       - pip install -e .
+#       - export MKL_THREADING_LAYER=GNU
+#       - python src/train_vit_multi_dataset.py --config configs/train_tokenized_vit_multi_cmip6.yaml
+#         --trainer.devices=${GPUS} --trainer.num_nodes=${NODES} --trainer.strategy=ddp
+#         --trainer.max_epochs=50
+#         --data.dict_root_dirs='{"mpi-esm":"/datadrive/datasets/CMIP6/MPI-ESM/5.625deg_equally_np_all_levels","taiesm":"/datadrive/datasets/CMIP6/TaiESM1/5.625deg_equally_np_all_levels"}'
+#         --data.dict_out_variables='{"mpi-esm":["z_500","t_850"],"taiesm":["z_500","t_850"]}'
+#         --data.dict_predict_ranges='{"mpi-esm":12,"taiesm":12}' --data.dict_histories='{"mpi-esm":1,"taiesm":1}' --data.dict_intervals='{"mpi-esm":0,"taiesm":0}'
+#         --data.num_workers=1 --data.batch_size=16
+#         --model.max_epochs=50
+#         --model.net.decoder_depth=2 --model.net.learn_pos_emb=True --model.net.img_size=[32,64]
+#         --model.net.time_history=1
+#         --model.net.out_vars=["z_500","t_850"]
+#         --model.net.channel_agg={agg}
+#         --model.net.init_mode='small'
+#         --model.net.patch_size=2
+#         --model.net.depth={depth}
+#         --model.net.embed_dim={dim}
+#         --model.net.num_heads={heads}
+#         --model.net.drop_path={drop_path}
+#         --model.net.drop_rate={drop_rate}
+#         --model.lr={lr}
+#         --model.weight_decay={decay}
+
+#   type: grid
+#   max_trials: 80
+#   params:
+#     - name: agg
+#       spec: discrete
+#       values: ["attention"]
+#     - name: drop_path
+#       spec: discrete
+#       values: [0.1]
+#     - name: drop_rate
+#       spec: discrete
+#       values: [0.1]
+#     - name: decay
+#       spec: discrete
+#       values: [1e-5]
+#     - name: heads
+#       spec: discrete
+#       values: [16]
+#     - name: lr
+#       spec: discrete
+#       values: [5e-4]
+#     - name: depth
+#       spec: discrete
+#       values: [8]
+#     - name: dim
+#       spec: discrete
+#       values: [1024]

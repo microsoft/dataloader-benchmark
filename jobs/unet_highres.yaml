@@ -1,0 +1,72 @@
+# Documentation:
+# https://amulet-docs.azurewebsites.net/main/advanced/51_distributed.html#
+# https://amulet-docs.azurewebsites.net/config_file.html
+
+description: Train Unet
+
+environment:
+  registry: commondockerimages.azurecr.io
+  username: commondockerimages
+  image: climate_pretraining:latest
+
+code:
+  local_dir: $CONFIG_DIR/../
+
+target:
+  service: aml
+  name: v100x4-ded
+
+storage:
+  data:
+    storage_account_name: weatherdatastorage2
+    # storage_account_name: weatherml1836488272
+    container_name: datasets
+    mount_dir: /mnt/data
+    mount_options: ["--file-cache-timeout-in-seconds=0"]
+
+# some environment variables to ease up setting of jobs
+env_defaults:
+  NODES: 1
+  GPUS: 4
+
+search:
+  job_template:
+    name: unet_1.40625deg_southasia_z500_3days_{auto:10s} # ex: simple_job_lr_05
+    sku: ${NODES}x32G${GPUS} # ex: G1
+    submit_args:
+      env: { AZUREML_COMPUTE_USE_COMMON_RUNTIME: True }
+      container_args:
+        shm_size: 650g
+    command:
+      - pip install -e .
+      - export MKL_THREADING_LAYER=GNU
+      - python src/train_cnn.py --config configs/train_unet.yaml
+        --trainer.devices=${GPUS} --trainer.num_nodes=${NODES} --trainer.strategy=ddp
+        --trainer.max_epochs=50
+        --data.root_dir=/mnt/data/era5_forecast_1.40625deg_3days/
+        --data.region='SouthAsia'
+        --data.out_variables=["z_500"]
+        --data.predict_range=72 --data.hrs_each_step=1
+        --data.num_workers=1 --data.batch_size=32
+        --data.buffer_size=5000
+        --model.warmup_epochs=12500 --model.max_epochs=125000
+        --model.lr={lr}
+        --model.net.out_channels=1
+        --model.net.patch_size=2
+        --model.net.dropout=0.1
+        --model.weight_decay=1e-5
+        --model.net.n_blocks={blocks}
+        --model.net.hidden_channels={channels}
+
+  type: grid
+  max_trials: 80
+  params:
+    - name: blocks
+      spec: discrete
+      values: [2]
+    - name: channels
+      spec: discrete
+      values: [64]
+    - name: lr
+      spec: discrete
+      values: [5e-4]
