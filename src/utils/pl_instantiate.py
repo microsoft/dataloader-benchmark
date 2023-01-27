@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 
 import pytorch_lightning as pl
 from pytorch_lightning import Callback, Trainer
-from pytorch_lightning.loggers import LightningLoggerBase
+from pytorch_lightning.loggers.logger import Logger
 
 
 def instantiate_class(init: Dict[str, Any]) -> Any:
@@ -38,9 +38,9 @@ def instantiate_callbacks(callbacks_cfg: dict) -> List[Callback]:
     return callbacks
 
 
-def instantiate_loggers(logger_cfg: dict) -> List[LightningLoggerBase]:
+def instantiate_loggers(logger_cfg: dict) -> List[Logger]:
     """Instantiates loggers from config."""
-    logger: List[LightningLoggerBase] = []
+    logger: List[Logger] = []
 
     if not logger_cfg:
         return logger
@@ -55,14 +55,12 @@ def instantiate_loggers(logger_cfg: dict) -> List[LightningLoggerBase]:
     return logger
 
 
-def instantiate_trainer(
-    trainer_cfg: dict, callbacks_cfg: dict, logger_cfg: dict, seed: Optional[int] = None
-):
+def instantiate_trainer(trainer_cfg: dict, callbacks_cfg: dict, logger_cfg: dict, seed: Optional[int] = None):
     if seed is not None:
         pl.seed_everything(seed, workers=True)
 
     callbacks: List[Callback] = instantiate_callbacks(callbacks_cfg)
-    logger: List[LightningLoggerBase] = instantiate_loggers(logger_cfg)
+    logger: List[Logger] = instantiate_loggers(logger_cfg)
     trainer: Trainer = Trainer(**trainer_cfg, callbacks=callbacks, logger=logger)
 
     return trainer

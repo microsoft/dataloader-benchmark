@@ -5,6 +5,7 @@ from src.utils.registry import registry
 
 def _try_register_climate_modules():
     try:
+        from .empty_lightningmodule import EmptyModule
         from .pretrain_multi_source_module import MultiSourceTrainDatasetModule
 
         print("import climate modules success")

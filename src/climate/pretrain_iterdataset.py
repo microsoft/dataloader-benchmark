@@ -9,7 +9,16 @@ from torch.utils.data import IterableDataset
 
 
 class NpyReader(IterableDataset):
-    def __init__(self, file_list, start_idx, end_idx, variables, out_variables, shuffle: bool = False, multi_dataset_training=False) -> None:
+    def __init__(
+        self,
+        file_list,
+        start_idx,
+        end_idx,
+        variables,
+        out_variables,
+        shuffle: bool = False,
+        multi_dataset_training=False,
+    ) -> None:
         super().__init__()
         start_idx = int(start_idx * len(file_list))
         end_idx = int(end_idx * len(file_list))
@@ -35,7 +44,7 @@ class NpyReader(IterableDataset):
                 world_size = torch.distributed.get_world_size()
             num_workers_per_ddp = worker_info.num_workers
             if self.multi_dataset_training:
-                num_nodes = int(os.environ.get("NODES", None))
+                num_nodes = int(os.environ.get("NODES", 1))
                 num_gpus_per_node = int(world_size / num_nodes)
                 num_shards = num_workers_per_ddp * num_gpus_per_node
                 rank = rank % num_gpus_per_node
@@ -71,7 +80,14 @@ class NpyReader(IterableDataset):
 
 class Forecast(IterableDataset):
     def __init__(
-        self, dataset: NpyReader, max_predict_range: int = 6, random_lead_time: bool = False, hrs_each_step: int = 1, history: int = 3, interval: int = 6, subsample: int = 1
+        self,
+        dataset: NpyReader,
+        max_predict_range: int = 6,
+        random_lead_time: bool = False,
+        hrs_each_step: int = 1,
+        history: int = 3,
+        interval: int = 6,
+        subsample: int = 1,
     ) -> None:
         super().__init__()
         self.dataset = dataset
@@ -131,7 +147,9 @@ class IndividualForecastDataIter(IterableDataset):
             for i in range(inp.shape[0]):
                 # TODO: should we unsqueeze the first dimension?
                 if self.transforms is not None:
-                    yield self.transforms(inp[i]), self.output_transforms(out[i]), lead_times[i], variables, out_variables, self.region_info
+                    yield self.transforms(inp[i]), self.output_transforms(out[i]), lead_times[
+                        i
+                    ], variables, out_variables, self.region_info
                 else:
                     yield inp[i], out[i], lead_times[i], variables, out_variables, self.region_info
 

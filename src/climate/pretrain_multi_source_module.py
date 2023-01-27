@@ -4,13 +4,13 @@ from typing import Dict, List, Optional
 import numpy as np
 import torch
 import torchdata.datapipes as dp
-from datamodules import BOUNDARIES, VAR_LEVEL_TO_NAME_LEVEL
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader
 from torchvision.transforms import transforms
 
 from src.utils.registry import registry
 
+from .constants import BOUNDARIES, VAR_LEVEL_TO_NAME_LEVEL
 from .pretrain_iterdataset import (
     Forecast,
     IndividualForecastDataIter,

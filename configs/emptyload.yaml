@@ -4,7 +4,7 @@ seed_everything: 42
 trainer:
   default_root_dir: ${oc.env:AMLT_OUTPUT_DIR,/mnt/climate_pretraining/outputs/vit}
 
-  precision: 16
+  # precision: 16
 
   gpus: null
   num_nodes: 1
@@ -116,7 +116,7 @@ model:
 data_name: "multisource"
 data:
   dict_root_dirs: {
-      'mpi-esm': '/datadrive/datasets/CMIP6/MPI-ESM/5.625deg_equally_np_all_levels',
+      'mpi-esm': '/datadrive/weatherdatastorage2/datasets/CMIP6/MPI-ESM/5.625deg_equally_np_all_levels',
   }
   dict_start_idx: {
       'mpi-esm': 0,

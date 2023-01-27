@@ -2,7 +2,8 @@ import os
 import sys
 
 import src
-from src.utils import cli, pl_instantiate, registry
+from src.utils import cli, pl_instantiate
+from src.utils.registry import registry
 
 
 def main():
@@ -11,12 +12,13 @@ def main():
     trainer = pl_instantiate.instantiate_trainer(
         cfg["trainer"],
         cfg["callbacks"],
-        cfg["logger"],
+        None,  # no loggers for now
         cfg.get("seed_everything", None),
     )
-    model = registry.get_lightningmodule(cfg["model_name"])(**cfg["model"])
+    # model = registry.get_lightningmodule(cfg["model_name"])(**cfg["model"])
+    model = registry.get_lightningmodule(cfg["model_name"])()  # empty model does not need parameters
     datamodule = registry.get_datamodule(cfg["data_name"])(**cfg["data"])
-
+    datamodule.set_patch_size(cfg["model"]["net"]["init_args"]["patch_size"])
     trainer.fit(model, datamodule)
 
 
