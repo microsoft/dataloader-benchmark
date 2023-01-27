@@ -1,22 +1,22 @@
 seed_everything: 42
-
+# based on configs/test_a100.yaml
 # ---------------------------- TRAINER -------------------------------------------
 trainer:
   default_root_dir: ${oc.env:AMLT_OUTPUT_DIR,/mnt/climate_pretraining/outputs/vit}
 
-  precision: bf16
+  precision: 16
 
   gpus: null
   num_nodes: 1
   accelerator: gpu
-  strategy: deepspeed_stage_1
+  strategy: ddp 
 
   min_epochs: 1
-  max_epochs: 50
+  max_epochs: 10
   enable_progress_bar: true
 
-  sync_batchnorm: True
-  enable_checkpointing: True
+  sync_batchnorm: false
+  enable_checkpointing: false
   resume_from_checkpoint: null
 
   limit_val_batches: 0
@@ -25,46 +25,14 @@ trainer:
   # debugging
   fast_dev_run: false
 
-  logger:
-    class_path: pytorch_lightning.loggers.tensorboard.TensorBoardLogger
-    init_args:
-      save_dir: ${trainer.default_root_dir}/logs
-      name: null
-      version: null
-      log_graph: False
-      default_hp_metric: True
-      prefix: ""
+  
 
-  callbacks:
-    - class_path: pytorch_lightning.callbacks.LearningRateMonitor
-      init_args:
-        logging_interval: "step"
-
-    - class_path: pytorch_lightning.callbacks.ModelCheckpoint
-      init_args:
-        dirpath: "${trainer.default_root_dir}/checkpoints"
-        # monitor: "val/w_rmse" # name of the logged metric which determines when model is improving
-        # mode: "min" # "max" means higher metric value is better, can be also "min"
-        # save_top_k: 1 # save k best models (determined by above metric)
-        save_last: True # additionaly always save model from last epoch
-        verbose: False
-        filename: "epoch_{epoch:03d}"
-        auto_insert_metric_name: False
-
-    # - class_path: pytorch_lightning.callbacks.EarlyStopping
-    #   init_args:
-    #     monitor: "val/w_mse" # name of the logged metric which determines when model is improving
-    #     mode: "min" # "max" means higher metric value is better, can be also "min"
-    #     patience: 3 # how many validation epochs of not improving until training stops
-    #     min_delta: 0 # minimum change in the monitored metric needed to qualify as an improvement
-
-    - class_path: pytorch_lightning.callbacks.RichModelSummary
-      init_args:
-        max_depth: -1
-
-    - class_path: pytorch_lightning.callbacks.RichProgressBar
+callbacks:
+  progress:
+    _targer_: pytorch_lightning.callbacks.RichProgressBar
 
 # ---------------------------- MODEL -------------------------------------------
+model_name: "emptymodule"
 model:
   lr: 0.0005
   beta_1: 0.9
@@ -145,6 +113,7 @@ model:
   pretrained_path: ""
 
 # ---------------------------- DATA -------------------------------------------
+data_name: "multisource"
 data:
   dict_root_dirs: {
       'mpi-esm': '/datadrive/datasets/CMIP6/MPI-ESM/5.625deg_equally_np_all_levels',
@@ -191,6 +160,6 @@ data:
   dict_buffer_sizes: {
     'mpi-esm': 10000,
   }
-  batch_size: 16
+  batch_size: 128
   num_workers: 1
   pin_memory: False

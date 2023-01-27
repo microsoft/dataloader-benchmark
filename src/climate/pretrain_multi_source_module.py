@@ -4,14 +4,19 @@ from typing import Dict, List, Optional
 import numpy as np
 import torch
 import torchdata.datapipes as dp
+from datamodules import BOUNDARIES, VAR_LEVEL_TO_NAME_LEVEL
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader
 from torchvision.transforms import transforms
 
-from datamodules import BOUNDARIES, VAR_LEVEL_TO_NAME_LEVEL
+from src.utils.registry import registry
 
-from .pretrain_iterdataset import (Forecast, IndividualForecastDataIter,
-                                   NpyReader, ShuffleIterableDataset)
+from .pretrain_iterdataset import (
+    Forecast,
+    IndividualForecastDataIter,
+    NpyReader,
+    ShuffleIterableDataset,
+)
 
 
 def collate_fn(batch):
@@ -27,10 +32,11 @@ def collate_fn(batch):
         lead_times,
         [VAR_LEVEL_TO_NAME_LEVEL[v] for v in variables],
         [VAR_LEVEL_TO_NAME_LEVEL[v] for v in out_variables],
-        region_info
+        region_info,
     )
 
 
+@registry.register_datamodule(name="multisource")
 class MultiSourceTrainDatasetModule(LightningDataModule):
     def __init__(
         self,
@@ -40,13 +46,13 @@ class MultiSourceTrainDatasetModule(LightningDataModule):
         dict_buffer_sizes: Dict,
         dict_in_variables: Dict,
         dict_out_variables: Dict,
-        dict_max_predict_ranges: Dict = {'mpi-esm': 28},
-        dict_random_lead_time: Dict = {'mpi-esm': True},
-        dict_hrs_each_step: Dict = {'mpi-esm': 6},
-        dict_histories: Dict = {'mpi-esm': 3},
-        dict_intervals: Dict = {'mpi-esm': 6},
-        dict_subsamples: Dict = {'mpi-esm': 1},
-        region: str = 'Global',
+        dict_max_predict_ranges: Dict = {"mpi-esm": 28},
+        dict_random_lead_time: Dict = {"mpi-esm": True},
+        dict_hrs_each_step: Dict = {"mpi-esm": 6},
+        dict_histories: Dict = {"mpi-esm": 3},
+        dict_intervals: Dict = {"mpi-esm": 6},
+        dict_subsamples: Dict = {"mpi-esm": 1},
+        region: str = "Global",
         batch_size: int = 64,
         num_workers: int = 0,
         pin_memory: bool = False,
@@ -75,7 +81,8 @@ class MultiSourceTrainDatasetModule(LightningDataModule):
                 "history": dict_histories[k],
                 "interval": dict_intervals[k],
                 "subsample": dict_subsamples[k],
-            } for k in dict_root_dirs.keys()
+            }
+            for k in dict_root_dirs.keys()
         }
 
         self.transforms = self.get_normalize()
@@ -85,14 +92,19 @@ class MultiSourceTrainDatasetModule(LightningDataModule):
 
     def get_region_info(self, region):
         region = BOUNDARIES[region]
-        lat_range = region['lat_range']
-        lon_range = region['lon_range']
+        lat_range = region["lat_range"]
+        lon_range = region["lon_range"]
         lat, lon = self.get_lat_lon()
-        lat = lat[::-1] # -90 to 90 from south (bottom) to north (top)
+        lat = lat[::-1]  # -90 to 90 from south (bottom) to north (top)
         h, w = len(lat), len(lon)
         lat_matrix = np.expand_dims(lat, axis=1).repeat(w, axis=1)
         lon_matrix = np.expand_dims(lon, axis=0).repeat(h, axis=0)
-        valid_cells = (lat_matrix >= lat_range[0]) & (lat_matrix <= lat_range[1]) & (lon_matrix >= lon_range[0]) & (lon_matrix <= lon_range[1])
+        valid_cells = (
+            (lat_matrix >= lat_range[0])
+            & (lat_matrix <= lat_range[1])
+            & (lon_matrix >= lon_range[0])
+            & (lon_matrix <= lon_range[1])
+        )
         h_ids, w_ids = np.nonzero(valid_cells)
         h_from, h_to = h_ids[0], h_ids[-1]
         w_from, w_to = w_ids[0], w_ids[-1]
@@ -110,13 +122,7 @@ class MultiSourceTrainDatasetModule(LightningDataModule):
                     max_h = max(max_h, i + p - 1)
                     min_w = min(min_w, j)
                     max_w = max(max_w, j + p - 1)
-        return {
-            'patch_ids': valid_patch_ids,
-            'min_h': min_h,
-            'max_h': max_h,
-            'min_w': min_w,
-            'max_w': max_w
-        }
+        return {"patch_ids": valid_patch_ids, "min_h": min_h, "max_h": max_h, "min_w": min_w, "max_w": max_w}
 
     def get_normalize(self, dict_variables: Optional[Dict] = None):
         if dict_variables is None:
@@ -134,9 +140,7 @@ class MultiSourceTrainDatasetModule(LightningDataModule):
                     mean.append(np.array([0.0]))
             normalize_mean = np.concatenate(mean)
             normalize_std = dict(np.load(os.path.join(root_dir, "normalize_std.npz")))
-            normalize_std = np.concatenate(
-                [normalize_std[VAR_LEVEL_TO_NAME_LEVEL[var]] for var in variables]
-            )
+            normalize_std = np.concatenate([normalize_std[VAR_LEVEL_TO_NAME_LEVEL[var]] for var in variables])
             dict_transforms[k] = transforms.Normalize(normalize_mean, normalize_std)
         return dict_transforms
 
@@ -174,13 +178,13 @@ class MultiSourceTrainDatasetModule(LightningDataModule):
                                 variables=variables,
                                 out_variables=out_variables,
                                 shuffle=True,
-                                multi_dataset_training=True
+                                multi_dataset_training=True,
                             ),
                             **dataset_args,
                         ),
                         transforms,
                         output_transforms,
-                        region_info=region_info
+                        region_info=region_info,
                     ),
                     buffer_size,
                 )
@@ -206,7 +210,7 @@ class MultiSourceTrainDatasetModule(LightningDataModule):
         # This assumes that the number of datapoints are going to be the same for all datasets
         return DataLoader(
             data_train,
-            batch_size=self.hparams.batch_size,            
+            batch_size=self.hparams.batch_size,
             drop_last=True,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
