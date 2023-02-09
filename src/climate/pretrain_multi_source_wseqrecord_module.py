@@ -4,6 +4,7 @@ from typing import Dict, List, Optional
 import numpy as np
 import torch
 import torchdata.datapipes as dp
+from constants import BOUNDARIES, VAR_LEVEL_TO_NAME_LEVEL
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader
 from torchvision.transforms import transforms
@@ -12,11 +13,9 @@ from wseqrecorder.wseqrecord import WSeqRecord
 
 from src.utils.registry import registry
 
-from .constants import BOUNDARIES, VAR_LEVEL_TO_NAME_LEVEL
-
-
 # todo: neither transform or output transform is applied
 # todo: parameters like random lead time, hrs_per_step, subsample is not used yet
+
 
 def collate_fn(batch):
     inp = torch.stack([batch[i][0] for i in range(len(batch))])
@@ -154,8 +153,7 @@ class MultiSourceTrainDataModule(LightningDataModule):
         # load datasets only if they're not loaded already
         if not self.dict_data_train:
             dict_data_train = {}
-            for k in self.dict_lister_trains.keys():
-                lister_train = self.dict_lister_trains[k]
+            for k in self.train_dataset_args.keys():
                 start_idx = self.hparams.dict_start_idx[k]
                 end_idx = self.hparams.dict_end_idx[k]
                 variables = self.hparams.dict_in_variables[k]
@@ -163,7 +161,9 @@ class MultiSourceTrainDataModule(LightningDataModule):
                 dataset_args = self.train_dataset_args[k]
                 transforms = self.transforms[k]
                 output_transforms = self.output_transforms[k]
-                train_record = WSeqRecord.load_record_from_dict(recorddir=self.hparams.dict_root_dirs[k])
+                train_record = WSeqRecord.load_record_from_dict(
+                    recorddir=os.path.join(self.hparams.dict_root_dirs[k], "train")
+                )
                 train_datapipe = WeatherDatapipeFromWSeqRecord(
                     record=train_record,
                     input_features=variables,
@@ -179,65 +179,66 @@ class MultiSourceTrainDataModule(LightningDataModule):
             self.dict_data_train = dict_data_train
 
     def train_dataloader(self):
-        if not torch.distributed.is_initialized():
-            raise NotImplementedError("Only support distributed training")
-        else:
-            node_rank = int(os.environ["NODE_RANK"])
-            # Requires setting up our job yaml `env_defaults` to have this variable setup correctly
-            num_nodes = os.envir:sp
-            on.get("NODES", None)
-            if num_nodes is not None:
-                num_nodes = int(num_nodes)
-                assert num_nodes == len(self.dict_data_train.keys())
+        # if not torch.distributed.is_initialized():
+        #     raise NotImplementedError("Only support distributed training")
+        # else:
+        #     node_rank = int(os.environ["NODE_RANK"])
+        #     # Requires setting up our job yaml `env_defaults` to have this variable setup correctly
+        #     num_nodes = os.environ.get("NODES", None)
+        #     if num_nodes is not None:
+        #         num_nodes = int(num_nodes)
+        #         assert num_nodes == len(self.dict_data_train.keys())
 
-            # TODO: figure out how to assert that number of datasets is the same as number of nodes
-            for idx, k in enumerate(self.dict_data_train.keys()):
-                if idx == node_rank:
-                    data_train = self.dict_data_train[k]
-                    break
+        #     # TODO: figure out how to assert that number of datasets is the same as number of nodes
+        #     for idx, k in enumerate(self.dict_data_train.keys()):
+        #         if idx == node_rank:
+        #             data_train = self.dict_data_train[k]
+        #             break
+
+        # for simplicity of testing, disabled distributed setting
+        data_train = self.dict_data_train["mpi-esm"]
 
         # This assumes that the number of datapoints are going to be the same for all datasets
         return DataLoader(
             data_train,
-            shuffle=True
+            shuffle=True,
             batch_size=None,
-            drop_last=True,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
         )
 
 
-dataset_type = 'forecast'
+dataset_type = "forecast"
 dict_root_dirs = {
-    'mpi-esm': '/datadrive/datasets/CMIP6/MPI-ESM/5.625deg_equally_np_all_levels',
+    "mpi-esm": "/datadrive/weatherdatastorage2/datasets/CMIP6/MPI-ESM/wseqrecord/1.40625deg_equally_np_all_levels",
 }
-dict_start_idx= {'mpi-esm': 0 }
-dict_buffer_sizes = {'mpi-esm': 1000}
-dict_end_idx= {
-      'mpi-esm': 1,
-  }
+dict_start_idx = {"mpi-esm": 0}
+dict_buffer_sizes = {"mpi-esm": 1000}
+dict_end_idx = {
+    "mpi-esm": 1,
+}
 dict_in_variables = {
-    'mpi-esm': ['t2m', 'z_500', 't_850'],
+    "mpi-esm": ["t2m", "z_500", "t_850"],
 }
 dict_out_variables = {
-    'mpi-esm': ['z_500', 't_850'],
+    "mpi-esm": ["z_500", "t_850"],
 }
-dict_max_predict_ranges = {'mpi-esm': 12}
+dict_max_predict_ranges = {"mpi-esm": 12}
 dict_random_lead_time = {
-    'mpi-esm': True,
-  }
+    "mpi-esm": True,
+}
 dict_hrs_each_step = {
-    'mpi-esm': 6,
+    "mpi-esm": 6,
 }
 dict_histories = {
-    'mpi-esm': 1,
-  }
+    "mpi-esm": 1,
+}
 dict_intervals = {
-    'mpi-esm': 0,
-  }
+    "mpi-esm": 0,
+}
 dict_subsamples = {
-    'mpi-esm': 1,
-  }
+    "mpi-esm": 1,
+}
 
 datamodule = MultiSourceTrainDataModule(
     dict_root_dirs,
@@ -253,17 +254,13 @@ datamodule = MultiSourceTrainDataModule(
     dict_intervals,
     dict_subsamples,
     batch_size=16,
-    num_workers=1,
-    pin_memory=False
+    num_workers=0,
+    pin_memory=False,
 )
+datamodule.set_patch_size(16)
 datamodule.setup()
 dataloader = datamodule.train_dataloader()
 for batch in dataloader:
-    for k in batch.keys():
-        print (k)
-        x1, y1, in1, out1 = batch[k]
-        print (x1.shape)
-        print (y1.shape)
-        print (in1)
-        print (out1)
+    for k in batch:
+        print(f"key {k} has value with shape {batch[k].shape}")
     break
