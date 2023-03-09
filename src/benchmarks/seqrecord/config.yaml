@@ -1,0 +1,19 @@
+json_filepath: /datadrive/azure_mounted_data/commondataset2/tartanair-release1/train_ann_abandonedfactory_easy.json
+rootdir: /datadrive/azure_mounted_data/commondataset2/tartanair-release1/abandonedfactory/
+
+inputs:
+  image_left:
+    modal: RGBImage
+    kwargs:
+      img_crop: 448
+      img_dim: 224
+  flow_flow:
+    modal: OpticalFlow
+    kwargs:
+      img_dim: 224
+      flow_normalizer: 20.0
+  depth_left:
+    modal: Depth
+    kwargs:
+      img_crop: 448
+      img_dim: 224
